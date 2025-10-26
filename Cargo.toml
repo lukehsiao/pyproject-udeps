@@ -13,19 +13,19 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.98"
-clap = { version = "4.5.37", features = ["wrap_help", "derive", "suggestions"] }
-clap-verbosity-flag = "3.0.2"
+anyhow = "1.0.100"
+clap = { version = "4.5.50", features = ["wrap_help", "derive", "suggestions"] }
+clap-verbosity-flag = "3.0.4"
 flume = "0.11.1"
-ignore = "0.4.23"
-log = "0.4.27"
+ignore = "0.4.24"
+log = "0.4.28"
 nom = "8.0.0"
 pep-508 = "0.4.0"
-phf = { version = "0.11.3", features = ["macros"] }
-toml = "0.8.20"
+phf = { version = "0.13.1", features = ["macros"] }
+toml = "0.9.8"
 tracing = "0.1.41"
 tracing-log = "0.2.0"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "fmt"] }
 xshell = "0.2.7"
 
 [dev-dependencies]

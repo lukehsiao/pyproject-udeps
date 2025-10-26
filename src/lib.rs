@@ -247,27 +247,27 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
             aliases.push(import.package);
 
             for alias in aliases {
-                if main_deps.contains_key(&alias) {
-                    if let Some(v) = main_deps.remove(&alias) {
-                        if v.is_empty() {
-                            info!(found = alias, path = path.to_str());
-                        } else {
-                            for orig in v {
-                                info!(found = orig, path = path.to_str());
-                                main_deps.remove(&orig);
-                            }
+                if main_deps.contains_key(&alias)
+                    && let Some(v) = main_deps.remove(&alias)
+                {
+                    if v.is_empty() {
+                        info!(found = alias, path = path.to_str());
+                    } else {
+                        for orig in v {
+                            info!(found = orig, path = path.to_str());
+                            main_deps.remove(&orig);
                         }
                     }
                 }
-                if dev_deps.contains_key(&alias) {
-                    if let Some(v) = dev_deps.remove(&alias) {
-                        if v.is_empty() {
-                            info!("Found {} in {}", alias, path.display());
-                        } else {
-                            for orig in v {
-                                info!("Found {} in {}", orig, path.display());
-                                main_deps.remove(&orig);
-                            }
+                if dev_deps.contains_key(&alias)
+                    && let Some(v) = dev_deps.remove(&alias)
+                {
+                    if v.is_empty() {
+                        info!("Found {} in {}", alias, path.display());
+                    } else {
+                        for orig in v {
+                            info!("Found {} in {}", orig, path.display());
+                            main_deps.remove(&orig);
                         }
                     }
                 }
@@ -317,18 +317,18 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
             Box::new(move |result| {
                 use ignore::WalkState::Continue;
 
-                if let Ok(dir) = result {
-                    if dir.file_type().unwrap().is_file() {
-                        let mut file = File::open(dir.path()).unwrap();
-                        let mut buf = Vec::new();
-                        file.read_to_end(&mut buf).unwrap();
-                        let contents = String::from_utf8_lossy(&buf);
-                        let v = parse_python_file(&contents).unwrap();
+                if let Ok(dir) = result
+                    && dir.file_type().unwrap().is_file()
+                {
+                    let mut file = File::open(dir.path()).unwrap();
+                    let mut buf = Vec::new();
+                    file.read_to_end(&mut buf).unwrap();
+                    let contents = String::from_utf8_lossy(&buf);
+                    let v = parse_python_file(&contents).unwrap();
 
-                        let path = dir.into_path();
-                        for import in v {
-                            tx.send((import, path.clone())).unwrap();
-                        }
+                    let path = dir.into_path();
+                    for import in v {
+                        tx.send((import, path.clone())).unwrap();
                     }
                 }
 
@@ -348,15 +348,15 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
         Box::new(move |result| {
             use ignore::WalkState::Continue;
 
-            if let Ok(dir) = result {
-                if dir.file_type().unwrap().is_file() {
-                    let contents = fs::read_to_string(dir.path()).unwrap();
-                    let v = parse_python_file(&contents).unwrap();
+            if let Ok(dir) = result
+                && dir.file_type().unwrap().is_file()
+            {
+                let contents = fs::read_to_string(dir.path()).unwrap();
+                let v = parse_python_file(&contents).unwrap();
 
-                    let path = dir.into_path();
-                    for import in v {
-                        tx.send((import, path.clone())).unwrap();
-                    }
+                let path = dir.into_path();
+                for import in v {
+                    tx.send((import, path.clone())).unwrap();
                 }
             }
 
