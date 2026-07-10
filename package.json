@@ -1,5 +1,5 @@
 {
-  "name": "poetry-udeps",
+  "name": "pyproject-udeps",
   "version": "0.2.10",
   "private": true,
   "devDependencies": {
