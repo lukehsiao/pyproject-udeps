@@ -1,0 +1,9 @@
+{
+  "name": "poetry-udeps",
+  "version": "0.2.10",
+  "private": true,
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0"
+  }
+}

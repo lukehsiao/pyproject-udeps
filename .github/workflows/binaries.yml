@@ -1,0 +1,128 @@
+name: Binaries
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to attach binaries to (e.g. v0.3.0)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach binaries to (e.g. v0.3.0)"
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            use-cross: false
+            ext: tar.gz
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+            use-cross: true
+            ext: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            use-cross: true
+            ext: tar.gz
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-latest
+            use-cross: true
+            ext: tar.gz
+          - target: armv7-unknown-linux-gnueabihf
+            runner: ubuntu-latest
+            use-cross: true
+            ext: tar.gz
+          - target: armv7-unknown-linux-musleabihf
+            runner: ubuntu-latest
+            use-cross: true
+            ext: tar.gz
+          - target: x86_64-apple-darwin
+            runner: macos-latest
+            use-cross: false
+            ext: tar.gz
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            use-cross: false
+            ext: tar.gz
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+            use-cross: false
+            ext: zip
+          - target: aarch64-pc-windows-msvc
+            runner: windows-latest
+            use-cross: false
+            ext: zip
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use-cross
+        uses: taiki-e/install-action@9e1e5806d4a4822de933115878265be9aaa786d9 # v2.82.2
+        with:
+          tool: cross
+
+      - name: Build
+        shell: bash
+        run: |
+          if [[ "${{ matrix.use-cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Create archive (tar.gz)
+        if: matrix.ext == 'tar.gz'
+        shell: bash
+        run: |
+          tar czf poetry-udeps-${{ matrix.target }}.tar.gz \
+            -C target/${{ matrix.target }}/release poetry-udeps
+
+      - name: Create archive (zip, Windows)
+        if: matrix.ext == 'zip' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          7z a poetry-udeps-${{ matrix.target }}.zip \
+            ./target/${{ matrix.target }}/release/poetry-udeps.exe
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            shasum -a 256 poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} > poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
+          else
+            sha256sum poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} > poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
+          fi
+
+      - name: Upload to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release upload "$TAG" \
+            poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} \
+            poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256 \
+            --clobber
