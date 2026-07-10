@@ -20,10 +20,13 @@ pub struct Cli {
     #[clap(flatten)]
     pub verbose: Verbosity,
     #[arg(short = 'e', long)]
-    /// Look for dependency usage in the poetry virtualenv.
+    /// Look for dependency usage in the project virtualenv.
     ///
-    /// Assumes you have already installed all dependencies using poetry. It
-    /// will check the directory specified by `poetry env info -p`.
+    /// Assumes you have already installed all dependencies. The virtualenv
+    /// is discovered from the project's lockfile and tool tables: poetry
+    /// projects via `poetry env info -p`, uv projects via
+    /// `$UV_PROJECT_ENVIRONMENT` or `.venv`, and other PEP 621 projects via
+    /// `$VIRTUAL_ENV` or `.venv`.
     pub virtualenv: bool,
     #[arg(short, long)]
     /// Look for unused dependencies in dev-dependencies.
