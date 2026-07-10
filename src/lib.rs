@@ -225,10 +225,11 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
             }
             // DBT Adapters
             if import.package.starts_with("dbt.adapters") {
-                aliases.push({
-                    let parts: Vec<&str> = import.package.split('.').collect();
-                    [parts[0], parts[2]].join("-")
-                });
+                let parts: Vec<&str> = import.package.split('.').collect();
+                // A bare `import dbt.adapters` has no adapter segment.
+                if parts.len() >= 3 {
+                    aliases.push([parts[0], parts[2]].join("-"));
+                }
             }
             // SQLAlchemy Extentions
             if import.package.contains('.') {
