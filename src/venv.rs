@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use tracing::debug;
 
 use crate::infra::env::Env;
@@ -62,8 +62,19 @@ fn local_venv(fs: &FileSystem) -> Option<PathBuf> {
 }
 
 fn poetry_venv(fs: &FileSystem, runner: &CommandRunner) -> Result<PathBuf> {
-    match runner.run("poetry", &["env", "info", "-p"]) {
-        Ok(path) => Ok(PathBuf::from(path)),
+    // Some poetry 1.x versions print nothing and exit 0 when no venv
+    // exists, so empty output is a miss, not a venv at "".
+    let reported = runner
+        .run("poetry", &["env", "info", "-p"])
+        .and_then(|path| {
+            if path.is_empty() {
+                Err(anyhow!("poetry reported no virtualenv path"))
+            } else {
+                Ok(PathBuf::from(path))
+            }
+        });
+    match reported {
+        Ok(path) => Ok(path),
         Err(err) => match local_venv(fs) {
             Some(venv) => {
                 debug!(%err, "poetry env info failed, using .venv");
@@ -138,6 +149,28 @@ mod test {
         let fs = FileSystem::create_null([("poetry.lock", ""), (".venv/lib/site.py", "")]);
         let venv = find_venv(&fs, &no_commands(), &no_env(), &manifest(POETRY_MANIFEST)).unwrap();
         assert_eq!(venv, PathBuf::from(".venv"));
+    }
+
+    #[test]
+    fn empty_poetry_output_falls_back_to_local_venv() {
+        let fs = FileSystem::create_null([("poetry.lock", ""), (".venv/lib/site.py", "")]);
+        let runner = CommandRunner::create_null([(
+            "poetry env info -p",
+            NullResponse::Stdout(String::new()),
+        )]);
+        let venv = find_venv(&fs, &runner, &no_env(), &manifest(POETRY_MANIFEST)).unwrap();
+        assert_eq!(venv, PathBuf::from(".venv"));
+    }
+
+    #[test]
+    fn empty_poetry_output_without_local_venv_is_an_error() {
+        let fs = FileSystem::create_null([("poetry.lock", "")]);
+        let runner = CommandRunner::create_null([(
+            "poetry env info -p",
+            NullResponse::Stdout(String::new()),
+        )]);
+        let err = find_venv(&fs, &runner, &no_env(), &manifest(POETRY_MANIFEST)).unwrap_err();
+        assert!(err.to_string().contains("poetry install"), "{err}");
     }
 
     #[test]
