@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- [`bb6a635`](https://github.com/lukehsiao/pyproject-udeps/commit/bb6a635c4949c2baef175d2b3ae12875eb5e29b2) - **build**: fix publishing token.
+
+<pre>
+$ git-stats v0.3.0..v0.3.1
+Author           Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao             1              1          +5          0     +5
+dependabot[bot]        1              4          +6         -6      0
+Total                  2              5         +11         -6     +5
+</pre>
+
 ## 0.3.0
 
 ### Minor Changes
