@@ -206,3 +206,208 @@ mod test {
         assert_eq!(extract_imports(""), vec![]);
     }
 }
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+    use hegel::generators;
+
+    /// Reserved words that the identifier regex can produce but Python
+    /// rejects as names.
+    const KEYWORDS: &[&str] = &[
+        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
+        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
+        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return",
+        "try", "while", "with", "yield",
+    ];
+
+    #[hegel::composite]
+    fn identifier(tc: hegel::TestCase) -> String {
+        let s = tc.draw(generators::from_regex("[a-zA-Z_][a-zA-Z0-9_]{0,10}").fullmatch(true));
+        tc.assume(!KEYWORDS.contains(&s.as_str()));
+        s
+    }
+
+    #[hegel::composite]
+    fn module_path(tc: hegel::TestCase) -> String {
+        let depth = tc.draw(generators::integers::<usize>().min_value(1).max_value(4));
+        let segments: Vec<String> = (0..depth).map(|_| tc.draw(identifier())).collect();
+        segments.join(".")
+    }
+
+    /// One import statement to render, plus the extraction we expect from it.
+    #[derive(Debug, Clone)]
+    enum Spec {
+        Plain {
+            path: String,
+            alias: Option<String>,
+        },
+        From {
+            path: String,
+            names: Vec<(String, Option<String>)>,
+        },
+    }
+
+    impl Spec {
+        fn expected(&self) -> Vec<Import> {
+            match self {
+                Spec::Plain { path, .. } => vec![Import {
+                    module: path.clone(),
+                    item: None,
+                }],
+                Spec::From { path, names } => names
+                    .iter()
+                    .map(|(name, _)| Import {
+                        module: path.clone(),
+                        item: Some(name.clone()),
+                    })
+                    .collect(),
+            }
+        }
+    }
+
+    #[hegel::composite]
+    fn spec(tc: hegel::TestCase) -> Spec {
+        let maybe_alias = |tc: &hegel::TestCase| {
+            if tc.draw(generators::booleans()) {
+                Some(tc.draw(identifier()))
+            } else {
+                None
+            }
+        };
+        if tc.draw(generators::booleans()) {
+            Spec::Plain {
+                path: tc.draw(module_path()),
+                alias: maybe_alias(&tc),
+            }
+        } else {
+            let count = tc.draw(generators::integers::<usize>().min_value(1).max_value(3));
+            let names = (0..count)
+                .map(|_| (tc.draw(identifier()), maybe_alias(&tc)))
+                .collect();
+            Spec::From {
+                path: tc.draw(module_path()),
+                names,
+            }
+        }
+    }
+
+    /// Text that mentions imports without being one: comments, docstrings,
+    /// and string literals. Extraction must yield nothing from any of these.
+    fn decoy(tc: &hegel::TestCase) -> String {
+        let module = tc.draw(module_path());
+        match tc.draw(generators::integers::<u8>().min_value(0).max_value(3)) {
+            0 => format!("# import {module}\n"),
+            1 => format!("\"\"\"\nimport {module}\n\"\"\"\n"),
+            2 => format!("'''from {module} import thing'''\n"),
+            _ => format!("_s = \"import {module}\"\n"),
+        }
+    }
+
+    fn render_name_list(names: &[(String, Option<String>)]) -> Vec<String> {
+        names
+            .iter()
+            .map(|(name, alias)| match alias {
+                Some(a) => format!("{name} as {a}"),
+                None => name.clone(),
+            })
+            .collect()
+    }
+
+    /// Render one spec with randomized but valid formatting choices.
+    fn render(tc: &hegel::TestCase, spec: &Spec) -> String {
+        let statement = match spec {
+            Spec::Plain { path, alias } => match alias {
+                Some(a) => format!("import {path} as {a}"),
+                None => format!("import {path}"),
+            },
+            Spec::From { path, names } => {
+                let rendered = render_name_list(names);
+                if names.len() > 1 && tc.draw(generators::booleans()) {
+                    // Parenthesized multi-line form, optional trailing comma.
+                    let trailing = if tc.draw(generators::booleans()) {
+                        ","
+                    } else {
+                        ""
+                    };
+                    format!(
+                        "from {path} import (\n    {}{trailing}\n)",
+                        rendered.join(",\n    ")
+                    )
+                } else {
+                    format!("from {path} import {}", rendered.join(", "))
+                }
+            }
+        };
+        let semicolon = if tc.draw(generators::booleans()) {
+            ";"
+        } else {
+            ""
+        };
+        if tc.draw(generators::booleans()) {
+            // Nested in a block: indent every line of the statement.
+            let indented = statement
+                .lines()
+                .map(|l| format!("    {l}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("if True:\n{indented}{semicolon}\n")
+        } else {
+            format!("{statement}{semicolon}\n")
+        }
+    }
+
+    fn sorted(mut imports: Vec<Import>) -> Vec<Import> {
+        imports.sort_by(|a, b| {
+            (a.module.as_str(), a.item.as_deref()).cmp(&(b.module.as_str(), b.item.as_deref()))
+        });
+        imports
+    }
+
+    // P1: whatever imports we render, however we format them, extraction
+    // returns exactly those imports and nothing from the decoy text.
+    #[hegel::test]
+    fn extraction_roundtrips_rendered_imports(tc: hegel::TestCase) {
+        let count = tc.draw(generators::integers::<usize>().min_value(0).max_value(6));
+        let specs: Vec<Spec> = (0..count).map(|_| tc.draw(spec())).collect();
+
+        let mut source = String::new();
+        let mut expected = Vec::new();
+        for s in &specs {
+            if tc.draw(generators::booleans()) {
+                source.push_str(&decoy(&tc));
+            }
+            source.push_str(&render(&tc, s));
+            expected.extend(s.expected());
+        }
+        if tc.draw(generators::booleans()) {
+            source.push_str(&decoy(&tc));
+        }
+
+        tc.note(&format!("source:\n{source}"));
+        assert_eq!(sorted(extract_imports(&source)), sorted(expected));
+    }
+
+    // P2: arbitrary text, including invalid syntax and exotic Unicode, must
+    // never panic the extractor.
+    #[hegel::test]
+    fn extraction_never_panics(tc: hegel::TestCase) {
+        let source = tc.draw(generators::text());
+        let _ = extract_imports(&source);
+    }
+
+    // P3: relative imports can never refer to a third-party distribution, so
+    // they are never extracted no matter the dot depth.
+    #[hegel::test]
+    fn relative_imports_are_never_extracted(tc: hegel::TestCase) {
+        let dots = tc.draw(generators::integers::<usize>().min_value(1).max_value(3));
+        let path = if tc.draw(generators::booleans()) {
+            tc.draw(module_path())
+        } else {
+            String::new()
+        };
+        let name = tc.draw(identifier());
+        let source = format!("from {}{path} import {name}\n", ".".repeat(dots));
+        assert_eq!(extract_imports(&source), vec![]);
+    }
+}
