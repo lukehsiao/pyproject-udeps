@@ -8,6 +8,7 @@ use tracing::{debug, error, info};
 
 use crate::ignorefile;
 use crate::imports::extract_imports;
+use crate::infra::env::Env;
 use crate::infra::fs::{FileSystem, WalkFilters};
 use crate::infra::process::{CommandRunner, NullResponse};
 use crate::matching::DependencyIndex;
@@ -28,6 +29,7 @@ pub struct Options {
 pub struct App {
     fs: FileSystem,
     runner: CommandRunner,
+    env: Env,
 }
 
 /// Configuration for a nulled [`App`], in each wrapper's own language.
@@ -37,6 +39,8 @@ pub struct NullConfig {
     pub files: Vec<(String, String)>,
     /// Rendered command line -> canned response.
     pub commands: Vec<(String, NullResponse)>,
+    /// Environment variables.
+    pub env: Vec<(String, String)>,
 }
 
 impl App {
@@ -45,6 +49,7 @@ impl App {
         App {
             fs: FileSystem::create(),
             runner: CommandRunner::create(),
+            env: Env::create(),
         }
     }
 
@@ -53,6 +58,7 @@ impl App {
         App {
             fs: FileSystem::create_null(config.files),
             runner: CommandRunner::create_null(config.commands),
+            env: Env::create_null(config.env),
         }
     }
 
@@ -79,12 +85,9 @@ impl App {
         // extracts imports and matches them.
         let mut walks = Vec::new();
         if options.virtualenv {
-            let venv_path = venv::find_venv(&self.runner)?;
-            info!("Reading files in venv: {venv_path}");
-            walks.push(
-                self.fs
-                    .walk_python_files(Path::new(&venv_path), WalkFilters::None),
-            );
+            let venv_path = venv::find_venv(&self.fs, &self.runner, &self.env, &manifest)?;
+            info!("Reading files in venv: {}", venv_path.display());
+            walks.push(self.fs.walk_python_files(&venv_path, WalkFilters::None));
         }
         walks.push(
             self.fs
@@ -199,6 +202,7 @@ pytest = \"^8.0\"
                 "poetry env info -p".into(),
                 NullResponse::Stdout("/venvs/demo".into()),
             )],
+            ..NullConfig::default()
         });
         let options = Options {
             virtualenv: true,
@@ -215,6 +219,7 @@ pytest = \"^8.0\"
                 "poetry env info -p".into(),
                 NullResponse::Failure("no venv".into()),
             )],
+            ..NullConfig::default()
         });
         let options = Options {
             virtualenv: true,
@@ -231,7 +236,11 @@ pytest = \"^8.0\"
         ]);
         let runner = CommandRunner::create_null([] as [(&str, NullResponse); 0]);
         let runs = runner.track_runs();
-        let app = App { fs, runner };
+        let app = App {
+            fs,
+            runner,
+            env: Env::create_null([] as [(&str, &str); 0]),
+        };
         app.run(&Options::default()).unwrap();
         assert_eq!(runs.data(), vec![]);
     }

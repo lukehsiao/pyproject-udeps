@@ -14,6 +14,8 @@ use tracing::info;
 pub struct Manifest {
     main: BTreeSet<String>,
     dev: BTreeSet<String>,
+    has_tool_poetry: bool,
+    has_tool_uv: bool,
 }
 
 impl Manifest {
@@ -91,6 +93,8 @@ impl Manifest {
         Ok(Manifest {
             main: without_python(main),
             dev: without_python(dev),
+            has_tool_poetry: lookup_table(&value, &["tool", "poetry"]).is_some(),
+            has_tool_uv: lookup_table(&value, &["tool", "uv"]).is_some(),
         })
     }
 
@@ -100,6 +104,16 @@ impl Manifest {
 
     pub fn dev_dependencies(&self) -> impl Iterator<Item = &str> + '_ {
         self.dev.iter().map(String::as_str)
+    }
+
+    /// The manifest has a `[tool.poetry]` table; consumed by venv discovery.
+    pub(crate) fn poetry_hint(&self) -> bool {
+        self.has_tool_poetry
+    }
+
+    /// The manifest has a `[tool.uv]` table; consumed by venv discovery.
+    pub(crate) fn uv_hint(&self) -> bool {
+        self.has_tool_uv
     }
 }
 
