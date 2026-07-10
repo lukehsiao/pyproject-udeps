@@ -357,7 +357,10 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
             if let Ok(dir) = result
                 && dir.file_type().unwrap().is_file()
             {
-                let contents = fs::read_to_string(dir.path()).unwrap();
+                let mut file = File::open(dir.path()).unwrap();
+                let mut buf = Vec::new();
+                file.read_to_end(&mut buf).unwrap();
+                let contents = String::from_utf8_lossy(&buf);
                 let v = parse_python_file(&contents).unwrap();
 
                 let path = dir.into_path();
