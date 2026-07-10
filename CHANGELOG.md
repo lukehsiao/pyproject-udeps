@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.3
+
+### Patch Changes
+
+- [`8c2f37f`](https://github.com/lukehsiao/pyproject-udeps/commit/8c2f37facc083500bf8df78deca42e7f900667ca) - **chore**: add `python-ulid` -> `ulid` mapping to eliminate false positive.
+
+<pre>
+$ git-stats v0.3.2..v0.3.3
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        1              3          +7         -1     +6
+Total             1              3          +7         -1     +6
+</pre>
+
 ## 0.3.2
 
 ### Patch Changes
