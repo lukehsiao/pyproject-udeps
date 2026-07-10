@@ -30,3 +30,23 @@ xshell = "0.2.7"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
+
+# Keep release binaries small. Fat LTO and single codegen unit cost build
+# time, but that only hits CI and `cargo install`.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
+pkg-fmt = "tgz"
+bin-dir = "{ bin }{ binary-ext }"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.zip"
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.zip"
+pkg-fmt = "zip"

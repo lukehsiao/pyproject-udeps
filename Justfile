@@ -28,102 +28,106 @@ fmt:
 watch:
 	bacon
 
-# Update the changelog using git-cliff
-_update_changelog version:
+# Install release tooling
+[group('build')]
+install:
+	pnpm install
+
+# Interactively create a changeset.
+[group('release')]
+changeset *args:
+	pnpm changeset {{ args }}
+
+# Sync version from package.json to Cargo manifest
+_sync-versions:
 	#!/usr/bin/env bash
 	set -euxo pipefail
 
-	# Update changelog
-	if ! command -v git-cliff &> /dev/null
-	then
-	    echo "Please install git-cliff: https://github.com/orhun/git-cliff#installation"
-	    exit
+	# read version from package.json
+	version=$(jaq -r '.version' package.json)
+
+	# ensure we found a version
+	[ -n "$version" ]
+	# replace a version line that starts at column 1: version = "..."
+	sd '^version\s+=\s+".*"$' "version = \"$version\"" Cargo.toml
+	cargo generate-lockfile
+	echo "Cargo.toml version set to $version"
+
+# Append git-stats to the latest CHANGELOG entry
+_append-git-stats:
+	#!/usr/bin/env bash
+	set -euo pipefail
+
+	version=$(jaq -r '.version' package.json)
+	prev_tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+
+	if [ -z "$prev_tag" ]; then
+	    echo "No previous tag found, skipping git-stats"
+	    exit 0
 	fi
 
-	git-cliff --tag {{version}} --unreleased --prepend CHANGELOG.md
-	${EDITOR:-vi} CHANGELOG.md
-	git commit CHANGELOG.md -m "docs(CHANGELOG): add entry for {{version}}"
+	if ! command -v git-stats &> /dev/null; then
+	    echo "Warning: git-stats not found, skipping"
+	    exit 0
+	fi
 
-# Increment the version
-_incr_version version: (_update_changelog version)
-	#!/usr/bin/env bash
-	set -euxo pipefail
+	if ! grep -q "^## ${version}$" CHANGELOG.md; then
+	    echo "Warning: '## ${version}' not found in CHANGELOG.md, skipping"
+	    exit 0
+	fi
 
-	# Update version
-	cargo set-version {{trim_start_match(version, "v")}}
-	cargo build --release
-	git commit Cargo.toml Cargo.lock -m "chore(release): bump version to {{version}}"
+	stats=$(git-stats "${prev_tag}..HEAD")
 
-# Get the changelog and git stats for the release
-_tlog describe version:
-	# Format git-cliff output friendly for the tag
-	@git cliff -c minimal --strip all --unreleased --tag {{version}} | sd "(^## .*\n\s+|^See the.*|^\[.*|^\s*$|^###\s)" ""
-	@echo "$ git stats -r {{describe}}..{{version}}"
-	@git stats -r {{describe}}..HEAD
+	# Find the new version header line number
+	version_line=$(grep -n "^## ${version}$" CHANGELOG.md | head -1 | cut -d: -f1)
 
-# Target can be ["major", "minor", "patch", or a version]
+	# Find the next section boundary (## or ---) after it
+	next_section=$(tail -n "+$((version_line + 1))" CHANGELOG.md \
+	    | grep -n "^## \|^---$" \
+	    | head -1 \
+	    | cut -d: -f1)
+
+	if [ -n "$next_section" ]; then
+	    insert_at=$((version_line + next_section - 1))
+	else
+	    insert_at=$(wc -l < CHANGELOG.md)
+	fi
+
+	# Build the stats block (HTML pre tag survives changesets processing)
+	stats_block=$(printf '<pre>\n$ git-stats %s..v%s\n%s\n</pre>' "$prev_tag" "$version" "$stats")
+
+	# Insert into CHANGELOG.md
+	{
+	    head -n "$insert_at" CHANGELOG.md
+	    echo "$stats_block"
+	    echo
+	    tail -n "+$((insert_at + 1))" CHANGELOG.md
+	} > CHANGELOG.md.tmp
+	mv CHANGELOG.md.tmp CHANGELOG.md
+
+	echo "Added git-stats to CHANGELOG.md for v${version}"
+
+# Create a version bump
 [group('release')]
-release target:
-	#!/usr/bin/env python3
-	# Inspired-by: https://git.sr.ht/~sircmpwn/dotfiles/tree/master/bin/semver
-	import os
-	import subprocess
-	import sys
-	import tempfile
-
-	if subprocess.run(["git", "branch", "--show-current"], stdout=subprocess.PIPE
-	        ).stdout.decode().strip() != "main":
-	    print("WARNING! Not on the main branch.")
-
-	subprocess.run(["git", "pull", "--rebase"])
-	p = subprocess.run(["git", "describe", "--abbrev=0"], stdout=subprocess.PIPE)
-	describe = p.stdout.decode().strip()
-	old_version = describe[1:].split("-")[0].split(".")
-	if len(old_version) == 2:
-	    [major, minor] = old_version
-	    [major, minor] = map(int, [major, minor])
-	    patch = 0
-	else:
-	    [major, minor, patch] = old_version
-	    [major, minor, patch] = map(int, [major, minor, patch])
-
-	new_version = None
-
-	if "{{target}}" == "patch":
-	    patch += 1
-	elif "{{target}}" == "minor":
-	    minor += 1
-	    patch = 0
-	elif "{{target}}" == "major":
-	    major += 1
-	    minor = patch = 0
-	else:
-	    new_version = "{{target}}"
-
-	if new_version is None:
-	    if len(old_version) == 2 and patch == 0:
-	        new_version = f"v{major}.{minor}"
-	    else:
-	        new_version = f"v{major}.{minor}.{patch}"
-
-	p = subprocess.run(["just", "_tlog", describe, new_version],
-	        stdout=subprocess.PIPE)
-	shortlog = p.stdout.decode()
-
-	p = subprocess.run(["just", "_incr_version", new_version])
-	if p and p.returncode != 0:
-	    print("Error: _incr_version returned nonzero exit code")
-	    sys.exit(1)
-
-	with tempfile.NamedTemporaryFile() as f:
-	    basename = os.path.basename(os.getcwd())
-	    f.write(f"{basename} {new_version}\n\n".encode())
-	    f.write(shortlog.encode())
-	    f.flush()
-	    subprocess.run(["git", "tag", "-e", "-F", f.name, "-a", new_version])
-	    print(new_version)
+version *args:
+	pnpm changeset version {{ args }}
+	just _sync-versions
+	just _append-git-stats
 
 # Publish a new version on crates.io
 [group('release')]
 publish:
-	cargo publish
+	#!/usr/bin/env bash
+	set -euo pipefail
+	output=$(pnpm changeset publish 2>&1)
+	echo "$output"
+	if echo "$output" | grep -q "New tag:"; then
+	    cargo publish
+	else
+	    echo "No new version published by changesets, skipping cargo publish."
+	fi
+
+# Show pending changesets and expected version bumps.
+[group('release')]
+status *args:
+	pnpm changeset status {{ args }}
