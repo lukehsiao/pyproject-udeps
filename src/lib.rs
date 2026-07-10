@@ -204,6 +204,7 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
 
     // Setup main thread for stdout
     let check_dev_deps = cli.dev;
+    let no_ignore = cli.no_ignore;
     let stdout_thread = thread::spawn(move || -> io::Result<Option<Vec<String>>> {
         for (import, path) in rx {
             debug!(
@@ -294,6 +295,8 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
 
         if udeps.is_empty() {
             Ok(None)
+        } else if no_ignore {
+            Ok(Some(udeps))
         } else {
             // Filter out those from ignorefile
             let filtered = apply_ignorefile(udeps)?;

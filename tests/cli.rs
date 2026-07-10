@@ -172,14 +172,16 @@ fn ignorefile_skips_comments_and_blank_lines() {
     cmd(&dir).assert().code(0).stdout("");
 }
 
-// Pins a known bug: --no-ignore is accepted but does nothing, so the
-// ignorefile still filters the report. The fix will flip this expectation.
 #[test]
-fn no_ignore_flag_is_currently_a_no_op() {
+fn no_ignore_flag_bypasses_the_ignorefile() {
     let dir = project(&[
         ("pyproject.toml", POETRY_MANIFEST),
         ("main.py", "import os\n"),
         (".poetryudepsignore", "requests\n"),
     ]);
-    cmd(&dir).arg("--no-ignore").assert().code(0).stdout("");
+    cmd(&dir)
+        .arg("--no-ignore")
+        .assert()
+        .code(1)
+        .stdout("requests\n");
 }
