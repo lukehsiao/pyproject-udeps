@@ -270,7 +270,7 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
                     } else {
                         for orig in v {
                             info!("Found {} in {}", orig, path.display());
-                            main_deps.remove(&orig);
+                            dev_deps.remove(&orig);
                         }
                     }
                 }
