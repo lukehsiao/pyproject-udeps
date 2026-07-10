@@ -121,6 +121,35 @@ dependencies = ["requests>=2.31"]
 }
 
 #[test]
+fn uv_style_project_reports_main_and_group_dependencies() {
+    let files = [
+        (
+            "pyproject.toml",
+            r#"
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["requests>=2.31", "numpy"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+"#,
+        ),
+        ("main.py", "import numpy\n"),
+    ];
+
+    let dir = project(&files);
+    cmd(&dir).assert().code(1).stdout("requests\n");
+
+    let dir = project(&files);
+    cmd(&dir)
+        .arg("--dev")
+        .assert()
+        .code(1)
+        .stdout("requests\npytest\n");
+}
+
+#[test]
 fn known_name_alias_marks_dependency_used() {
     let dir = project(&[
         (
