@@ -11,13 +11,13 @@ fn main() {
         .init();
 
     match run(&cli) {
-        Ok(Some(deps)) => {
+        Ok(deps) if deps.is_empty() => process::exit(0),
+        Ok(deps) => {
             for dep in deps {
                 println!("{dep}");
             }
             process::exit(1);
         }
-        Ok(None) => process::exit(0),
         Err(e) => {
             eprintln!("{e}");
             process::exit(2)
