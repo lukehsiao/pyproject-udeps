@@ -267,6 +267,16 @@ fn ignorefile_filters_reported_dependencies() {
     let dir = project(&[
         ("pyproject.toml", POETRY_MANIFEST),
         ("main.py", "import os\n"),
+        (".pyprojectudepsignore", "requests\n"),
+    ]);
+    cmd(&dir).assert().code(0).stdout("");
+}
+
+#[test]
+fn legacy_ignorefile_name_still_works() {
+    let dir = project(&[
+        ("pyproject.toml", POETRY_MANIFEST),
+        ("main.py", "import os\n"),
         (".poetryudepsignore", "requests\n"),
     ]);
     cmd(&dir).assert().code(0).stdout("");
