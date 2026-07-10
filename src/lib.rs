@@ -6,18 +6,19 @@ use std::{
     thread,
 };
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use ignore::{WalkBuilder, types::TypesBuilder};
-use toml::Value;
 use tracing::{debug, error, info};
 use xshell::{Shell, cmd};
 
 mod imports;
 mod name_map;
+mod pyproject;
 use crate::imports::{Import, extract_imports};
 use crate::name_map::KNOWN_NAMES;
+use crate::pyproject::Manifest;
 
 const IGNORE_FILE: &str = ".poetryudepsignore";
 
@@ -49,14 +50,9 @@ fn get_venv_path() -> Result<String> {
     Ok(cmd!(sh, "poetry env info -p").quiet().read()?)
 }
 
-enum DepType {
-    Main,
-    Dev,
-}
-
-/// Returns two maps (one for core deps, one for dev-deps).
+/// Builds a matching map from declared package names.
 ///
-/// The maps are filled with either the original package name -> None, or with
+/// The map is filled with either the original package name -> [], or with
 /// the alias -> [package names]. This helps us quickly determine which original
 /// dependency to eliminate if either the original package name or alias is
 /// found.
@@ -64,79 +60,11 @@ enum DepType {
 /// We do not simply track the aliases alone, as reporting an alias as obsolete
 /// is not as straightforward to the user which line to eliminate from their
 /// pyproject.toml.
-fn get_dependencies(file: &Path, deps: &DepType) -> Result<Option<BTreeMap<String, Vec<String>>>> {
-    let toml = fs::read_to_string(file)?;
-
-    // TODO: map package name to actual module name.
-    // Ref: https://stackoverflow.com/a/54853084
-    // toml 0.9 parses `Value` from value syntax, not document syntax, so a
-    // document must go through `Table`.
-    let value = Value::Table(toml.parse::<toml::Table>()?);
-    let dep_table: Vec<String> = match deps {
-        DepType::Main => {
-            match value
-                .get("tool")
-                .and_then(|tool| tool.get("poetry"))
-                .and_then(|poetry| poetry.get("dependencies"))
-                .and_then(|deps| deps.as_table())
-            {
-                Some(deps) => deps.keys().map(std::borrow::ToOwned::to_owned).collect(),
-                // Check poetry >=2.0
-                None => {
-                    if let Some(deps) = value
-                        .get("project")
-                        .and_then(|dev| dev.get("dependencies"))
-                        .and_then(|dependencies| dependencies.as_array())
-                        .map(|dep_array: &Vec<Value>| {
-                            dep_array
-                                .iter()
-                                .filter_map(|val| {
-                                    val.as_str().and_then(|s| {
-                                        pep_508::parse(s).ok().map(|req| req.name.to_string())
-                                    })
-                                })
-                                .collect()
-                        })
-                    {
-                        deps
-                    } else {
-                        bail!("failed to parse dependencies from pyproject.toml")
-                    }
-                }
-            }
-        }
-        DepType::Dev => {
-            // Check poetry >=1.0,<1.2's dev-dependencies
-            match value
-                .get("tool")
-                .and_then(|tool| tool.get("poetry"))
-                .and_then(|poetry| poetry.get("dev-dependencies"))
-                .and_then(|dev| dev.as_table())
-            {
-                Some(dev) => dev.keys().map(std::borrow::ToOwned::to_owned).collect(),
-                // Check poetry >=1.2.0's dependency groups
-                None => {
-                    if let Some(deps) = value
-                        .get("tool")
-                        .and_then(|tool| tool.get("poetry"))
-                        .and_then(|poetry| poetry.get("group"))
-                        .and_then(|group| group.get("dev"))
-                        .and_then(|dev| dev.get("dependencies"))
-                        .and_then(|dependencies| dependencies.as_table())
-                    {
-                        deps.keys().map(std::borrow::ToOwned::to_owned).collect()
-                    } else {
-                        info!("failed to parse dev dependencies from pyproject.toml");
-                        return Ok(None);
-                    }
-                }
-            }
-        }
-    };
+fn build_alias_map<'a>(packages: impl Iterator<Item = &'a str>) -> BTreeMap<String, Vec<String>> {
     let mut dependencies: BTreeMap<String, Vec<String>> = BTreeMap::new();
 
     // Generate a list of possible aliases for the package
-    dep_table.iter().filter(|s| *s != "python").for_each(|s| {
+    packages.for_each(|s| {
         let package = String::from(s);
         dependencies.insert(package.clone(), vec![]);
         let mut alias = KNOWN_NAMES.get(&package).map(|a| String::from(*a));
@@ -151,7 +79,7 @@ fn get_dependencies(file: &Path, deps: &DepType) -> Result<Option<BTreeMap<Strin
             dependencies.insert(package, vec![]);
         }
     });
-    Ok(Some(dependencies))
+    dependencies
 }
 
 // Read lines from ignorefile. Ignore empty lines and comments.
@@ -195,9 +123,10 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
         }
     }
 
-    let mut main_deps = get_dependencies(pyproject_path, &DepType::Main)?.unwrap();
+    let manifest = Manifest::parse(&fs::read_to_string(pyproject_path)?)?;
+    let mut main_deps = build_alias_map(manifest.main_dependencies());
     info!(?main_deps);
-    let mut dev_deps = get_dependencies(pyproject_path, &DepType::Dev)?.unwrap_or_default();
+    let mut dev_deps = build_alias_map(manifest.dev_dependencies());
     info!(?dev_deps);
 
     let (tx, rx) = flume::bounded::<(Import, PathBuf)>(100);
