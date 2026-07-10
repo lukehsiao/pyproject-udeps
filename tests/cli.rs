@@ -153,6 +153,24 @@ python-dateutil = "^2.9"
 }
 
 #[test]
+fn aliased_dev_dependency_is_not_reported_when_used() {
+    let dir = project(&[
+        (
+            "pyproject.toml",
+            r#"
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+scikit-learn = "^1.4"
+"#,
+        ),
+        ("main.py", "import sklearn\n"),
+    ]);
+    cmd(&dir).arg("--dev").assert().code(0).stdout("");
+}
+
+#[test]
 fn ignorefile_filters_reported_dependencies() {
     let dir = project(&[
         ("pyproject.toml", POETRY_MANIFEST),
