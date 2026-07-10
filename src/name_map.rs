@@ -43,6 +43,7 @@ pub static KNOWN_NAMES: phf::OrderedMap<&str, &str> = phf_ordered_map! {
     "protobuf" => "google.protobuf",
     "pyautogen" => "autogen",
     "pybars3" => "pybars",
+    "pyserial" => "serial",
     "python-jose" => "jose",
     "python-multipart" => "multipart",
     "python-slugify" => "slugify",
