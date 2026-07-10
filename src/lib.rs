@@ -35,7 +35,10 @@ pub struct Cli {
     /// not directly used in the codebase.
     pub dev: bool,
     #[arg(long = "no-ignore")]
-    /// Do not ignore the packages in .poetryudepsignore
+    /// Do not ignore the packages in the ignorefile.
+    ///
+    /// The ignorefile is .pyprojectudepsignore, or the legacy
+    /// .poetryudepsignore as a fallback.
     pub no_ignore: bool,
 }
 

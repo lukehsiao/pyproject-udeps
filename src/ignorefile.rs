@@ -7,19 +7,24 @@ use tracing::debug;
 
 use crate::infra::fs::FileSystem;
 
-pub const IGNORE_FILE: &str = ".poetryudepsignore";
+pub const IGNORE_FILE: &str = ".pyprojectudepsignore";
+/// The pre-rename ignorefile name, still honored so existing projects keep
+/// working. The new name wins when both exist.
+pub const LEGACY_IGNORE_FILE: &str = ".poetryudepsignore";
 
 /// The packages listed in the project's ignorefile.
 ///
 /// Empty lines and `#` comments are skipped. A missing or unreadable
 /// ignorefile is simply an empty set.
 pub fn ignored_packages(fs: &FileSystem) -> BTreeSet<String> {
-    let Ok(contents) = fs.read_to_string_lossy(Path::new(IGNORE_FILE)) else {
-        return BTreeSet::new();
-    };
-    let ignored = parse(&contents);
-    debug!(?ignored);
-    ignored
+    for path in [IGNORE_FILE, LEGACY_IGNORE_FILE] {
+        if let Ok(contents) = fs.read_to_string_lossy(Path::new(path)) {
+            let ignored = parse(&contents);
+            debug!(?ignored, path);
+            return ignored;
+        }
+    }
+    BTreeSet::new()
 }
 
 fn parse(contents: &str) -> BTreeSet<String> {
@@ -56,6 +61,27 @@ mod test {
         assert_eq!(
             ignored_packages(&fs),
             BTreeSet::from(["pytest".to_string()])
+        );
+    }
+
+    #[test]
+    fn falls_back_to_the_legacy_ignorefile_name() {
+        let fs = FileSystem::create_null([(LEGACY_IGNORE_FILE, "pytest\n")]);
+        assert_eq!(
+            ignored_packages(&fs),
+            BTreeSet::from(["pytest".to_string()])
+        );
+    }
+
+    #[test]
+    fn new_ignorefile_name_wins_over_the_legacy_one() {
+        let fs = FileSystem::create_null([
+            (IGNORE_FILE, "from-new\n"),
+            (LEGACY_IGNORE_FILE, "from-legacy\n"),
+        ]);
+        assert_eq!(
+            ignored_packages(&fs),
+            BTreeSet::from(["from-new".to_string()])
         );
     }
 }
