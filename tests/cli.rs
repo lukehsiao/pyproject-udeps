@@ -196,6 +196,16 @@ dbt-postgres = "^1.9"
 }
 
 #[test]
+fn non_utf8_python_file_does_not_crash() {
+    let dir = project(&[
+        ("pyproject.toml", POETRY_MANIFEST),
+        ("main.py", "import requests\n"),
+    ]);
+    fs::write(dir.path().join("legacy.py"), b"import os\n\xff\xfe garbage\n").unwrap();
+    cmd(&dir).assert().code(0).stdout("");
+}
+
+#[test]
 fn ignorefile_filters_reported_dependencies() {
     let dir = project(&[
         ("pyproject.toml", POETRY_MANIFEST),
