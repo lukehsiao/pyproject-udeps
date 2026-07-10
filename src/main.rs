@@ -1,9 +1,17 @@
+//! The final poetry-udeps release: a thin wrapper around pyproject-udeps,
+//! the same tool under its new name.
+
 use clap::Parser;
 use pyproject_udeps::{Cli, run};
 use std::process;
 use tracing_log::AsTrace;
 
 fn main() {
+    eprintln!(
+        "note: poetry-udeps has been renamed to pyproject-udeps and now also \
+         supports uv and PEP 621 projects.\n      install it with: cargo install pyproject-udeps"
+    );
+
     let cli = Cli::parse();
 
     tracing_subscriber::fmt()
@@ -22,15 +30,5 @@ fn main() {
             eprintln!("{e}");
             process::exit(2)
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::*;
-    #[test]
-    fn verify_app() {
-        use clap::CommandFactory;
-        Cli::command().debug_assert();
     }
 }
