@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.2
+
+### Patch Changes
+
+- [`406b665`](https://github.com/lukehsiao/pyproject-udeps/commit/406b665a4c72680a047d172ceee0ad179fda8d69) - **fix**: add the `pyserial` -> `serial` alias to avoid a false positive.
+
+<pre>
+$ git-stats v0.3.1..v0.3.2
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        1              2          +6          0     +6
+Total             1              2          +6          0     +6
+</pre>
+
 ## 0.3.1
 
 ### Patch Changes
