@@ -6,8 +6,8 @@
 //! `try`/`except ImportError` blocks, and `if TYPE_CHECKING` sections are all
 //! found, while text inside string literals, docstrings, and comments is not.
 
-use ruff_python_ast::visitor::{Visitor, walk_stmt};
-use ruff_python_ast::{self as ast, PySourceType, Stmt};
+use ruff_python_ast::visitor::{Visitor, walk_expr, walk_stmt};
+use ruff_python_ast::{self as ast, Expr, PySourceType, Stmt};
 use ruff_python_parser::parse_unchecked_source;
 use tracing::debug;
 
@@ -80,6 +80,40 @@ impl Visitor<'_> for ImportCollector {
         // are found too.
         walk_stmt(self, stmt);
     }
+
+    fn visit_expr(&mut self, expr: &Expr) {
+        if let Expr::Call(call) = expr
+            && let Some(module) = dynamic_import_argument(call)
+        {
+            self.imports.push(Import { module, item: None });
+        }
+        walk_expr(self, expr);
+    }
+}
+
+/// The module imported by `importlib.import_module("x")` or
+/// `__import__("x")`, when the argument is a plain string literal.
+///
+/// Only those two spellings are recognized; a bare `import_module(...)`
+/// could be anyone's function. Relative arguments (leading `.`) are skipped
+/// like relative import statements.
+fn dynamic_import_argument(call: &ast::ExprCall) -> Option<String> {
+    let is_dynamic_import = match call.func.as_ref() {
+        Expr::Attribute(ast::ExprAttribute { value, attr, .. }) => {
+            attr.as_str() == "import_module"
+                && matches!(value.as_ref(), Expr::Name(name) if name.id.as_str() == "importlib")
+        }
+        Expr::Name(name) => name.id.as_str() == "__import__",
+        _ => false,
+    };
+    if !is_dynamic_import {
+        return None;
+    }
+    let Some(Expr::StringLiteral(literal)) = call.arguments.args.first() else {
+        return None;
+    };
+    let module = literal.value.to_str();
+    (!module.starts_with('.')).then(|| module.to_string())
 }
 
 #[cfg(test)]
@@ -205,6 +239,34 @@ mod test {
     fn empty_source() {
         assert_eq!(extract_imports(""), vec![]);
     }
+
+    #[test]
+    fn importlib_import_module_with_string_literal() {
+        assert_eq!(
+            extract_imports("import importlib\nx = importlib.import_module(\"requests\")\n"),
+            vec![import("importlib"), import("requests")]
+        );
+    }
+
+    #[test]
+    fn dunder_import_with_string_literal() {
+        assert_eq!(
+            extract_imports("mod = __import__(\"numpy\")\n"),
+            vec![import("numpy")]
+        );
+    }
+
+    #[test]
+    fn dynamic_imports_without_literals_are_ignored() {
+        let source = concat!(
+            "name = \"requests\"\n",
+            "importlib.import_module(name)\n",
+            "importlib.import_module(f\"pkg.{name}\")\n",
+            "import_module(\"bare_call\")\n",
+            "importlib.import_module(\"..relative\", package=__name__)\n",
+        );
+        assert_eq!(extract_imports(source), vec![]);
+    }
 }
 
 #[cfg(test)]
@@ -297,6 +359,9 @@ mod properties {
         let statement = match spec {
             Spec::Plain { path, alias } => match alias {
                 Some(a) => format!("import {path} as {a}"),
+                None if tc.draw(generators::booleans()) => {
+                    format!("_m = importlib.import_module(\"{path}\")")
+                }
                 None => format!("import {path}"),
             },
             Spec::From { path, names } => {
