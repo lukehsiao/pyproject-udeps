@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeMap,
     fs::{self, File},
     io::{self, BufRead, BufReader, Read},
     path::{Path, PathBuf},
@@ -14,10 +13,13 @@ use tracing::{debug, error, info};
 use xshell::{Shell, cmd};
 
 mod imports;
+mod matching;
 mod name_map;
 mod pyproject;
+#[cfg(test)]
+mod testgen;
 use crate::imports::{Import, extract_imports};
-use crate::name_map::KNOWN_NAMES;
+use crate::matching::DependencyIndex;
 use crate::pyproject::Manifest;
 
 const IGNORE_FILE: &str = ".poetryudepsignore";
@@ -48,38 +50,6 @@ fn get_venv_path() -> Result<String> {
     let sh = Shell::new()?;
 
     Ok(cmd!(sh, "poetry env info -p").quiet().read()?)
-}
-
-/// Builds a matching map from declared package names.
-///
-/// The map is filled with either the original package name -> [], or with
-/// the alias -> [package names]. This helps us quickly determine which original
-/// dependency to eliminate if either the original package name or alias is
-/// found.
-///
-/// We do not simply track the aliases alone, as reporting an alias as obsolete
-/// is not as straightforward to the user which line to eliminate from their
-/// pyproject.toml.
-fn build_alias_map<'a>(packages: impl Iterator<Item = &'a str>) -> BTreeMap<String, Vec<String>> {
-    let mut dependencies: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-    // Generate a list of possible aliases for the package
-    packages.for_each(|s| {
-        let package = String::from(s);
-        dependencies.insert(package.clone(), vec![]);
-        let mut alias = KNOWN_NAMES.get(&package).map(|a| String::from(*a));
-
-        // Or basic replacement
-        if alias.is_none() && package.contains('-') {
-            alias = Some(package.replace('-', "_").to_lowercase());
-        }
-        if let Some(a) = alias {
-            dependencies.entry(a).or_default().push(package);
-        } else {
-            dependencies.insert(package, vec![]);
-        }
-    });
-    dependencies
 }
 
 // Read lines from ignorefile. Ignore empty lines and comments.
@@ -124,10 +94,9 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
     }
 
     let manifest = Manifest::parse(&fs::read_to_string(pyproject_path)?)?;
-    let mut main_deps = build_alias_map(manifest.main_dependencies());
-    info!(?main_deps);
-    let mut dev_deps = build_alias_map(manifest.dev_dependencies());
-    info!(?dev_deps);
+    info!(?manifest);
+    let mut main_deps = DependencyIndex::new(manifest.main_dependencies().map(str::to_owned));
+    let mut dev_deps = DependencyIndex::new(manifest.dev_dependencies().map(str::to_owned));
 
     let (tx, rx) = flume::bounded::<(Import, PathBuf)>(100);
 
@@ -142,81 +111,17 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
                 path = path.to_str(),
                 "Checking import",
             );
-            // Packages may have several aliases
-            let mut aliases = vec![];
-            if let Some(item) = &import.item {
-                // Google-style package naming
-                aliases.push(format!("{}-{}", import.module.replace('.', "-"), item));
+            for found in main_deps.mark_used(&import) {
+                info!(found, path = path.to_str());
             }
-            // DBT Adapters
-            if import.module.starts_with("dbt.adapters") {
-                let parts: Vec<&str> = import.module.split('.').collect();
-                // A bare `import dbt.adapters` has no adapter segment.
-                if parts.len() >= 3 {
-                    aliases.push([parts[0], parts[2]].join("-"));
-                }
-            }
-            // SQLAlchemy Extentions
-            if import.module.contains('.') {
-                aliases.push(import.module.split('.').collect::<Vec<&str>>().join("-"));
-            }
-            if let Some(p) = import.module.split_once('.') {
-                aliases.push(p.0.to_string());
-            }
-
-            // Include parent packages after 1 level deep.
-            // This is to catch things like
-            // `from google.auth.transport import requests` --> google-auth
-            let v: Vec<&str> = import.module.split('.').collect();
-            if v.len() >= 2 {
-                aliases.push(format!("{}-{}", v[0], v[1]));
-            }
-
-            // Just the package
-            aliases.push(import.module);
-
-            for alias in aliases {
-                if main_deps.contains_key(&alias)
-                    && let Some(v) = main_deps.remove(&alias)
-                {
-                    if v.is_empty() {
-                        info!(found = alias, path = path.to_str());
-                    } else {
-                        for orig in v {
-                            info!(found = orig, path = path.to_str());
-                            main_deps.remove(&orig);
-                        }
-                    }
-                }
-                if dev_deps.contains_key(&alias)
-                    && let Some(v) = dev_deps.remove(&alias)
-                {
-                    if v.is_empty() {
-                        info!("Found {} in {}", alias, path.display());
-                    } else {
-                        for orig in v {
-                            info!("Found {} in {}", orig, path.display());
-                            dev_deps.remove(&orig);
-                        }
-                    }
-                }
+            for found in dev_deps.mark_used(&import) {
+                info!(found, path = path.to_str(), dev = true);
             }
         }
 
-        let mut udeps = Vec::new();
-        for (key, value) in &main_deps {
-            // Only print the non-alias names
-            if value.is_empty() {
-                udeps.push(key.to_owned());
-            }
-        }
+        let mut udeps = main_deps.unused();
         if check_dev_deps {
-            for (key, value) in &dev_deps {
-                // Only print the non-alias names
-                if value.is_empty() {
-                    udeps.push(key.to_owned());
-                }
-            }
+            udeps.extend(dev_deps.unused());
         }
 
         if udeps.is_empty() {
