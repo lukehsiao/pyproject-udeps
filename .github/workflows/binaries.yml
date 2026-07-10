@@ -97,23 +97,23 @@ jobs:
         if: matrix.ext == 'tar.gz'
         shell: bash
         run: |
-          tar czf poetry-udeps-${{ matrix.target }}.tar.gz \
-            -C target/${{ matrix.target }}/release poetry-udeps
+          tar czf pyproject-udeps-${{ matrix.target }}.tar.gz \
+            -C target/${{ matrix.target }}/release pyproject-udeps
 
       - name: Create archive (zip, Windows)
         if: matrix.ext == 'zip' && runner.os == 'Windows'
         shell: bash
         run: |
-          7z a poetry-udeps-${{ matrix.target }}.zip \
-            ./target/${{ matrix.target }}/release/poetry-udeps.exe
+          7z a pyproject-udeps-${{ matrix.target }}.zip \
+            ./target/${{ matrix.target }}/release/pyproject-udeps.exe
 
       - name: Generate checksums
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            shasum -a 256 poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} > poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
+            shasum -a 256 pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }} > pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
           else
-            sha256sum poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} > poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
+            sha256sum pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }} > pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256
           fi
 
       - name: Upload to release
@@ -123,6 +123,6 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           gh release upload "$TAG" \
-            poetry-udeps-${{ matrix.target }}.${{ matrix.ext }} \
-            poetry-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256 \
+            pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }} \
+            pyproject-udeps-${{ matrix.target }}.${{ matrix.ext }}.sha256 \
             --clobber

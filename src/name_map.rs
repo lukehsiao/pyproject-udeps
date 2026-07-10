@@ -9,7 +9,7 @@ use phf::phf_ordered_map;
 /// generate (e.g., databricks-sql), to improve the mapping.
 ///
 /// If you would like to add or improve this list, please file a PR:
-/// <https://github.com/lukehsiao/poetry-udeps>.
+/// <https://github.com/lukehsiao/pyproject-udeps>.
 ///
 /// Please try to keep this list sorted lexicographically and wrapped to 79
 /// columns (inclusive).
