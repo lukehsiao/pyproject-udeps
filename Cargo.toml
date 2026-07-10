@@ -2,6 +2,8 @@
 name = "poetry-udeps"
 version = "0.2.10"
 edition = "2024"
+# ruff_python_parser requires 1.94.
+rust-version = "1.94"
 authors = ["Luke Hsiao <luke@hsiao.dev>"]
 description = "Find unused dependencies in pyproject.toml"
 repository = "https://github.com/lukehsiao/poetry-udeps"
@@ -19,9 +21,10 @@ clap-verbosity-flag = "3.0.4"
 flume = "0.11.1"
 ignore = "0.4.24"
 log = "0.4.28"
-nom = "8.0.0"
 pep-508 = "0.4.0"
 phf = { version = "0.13.1", features = ["macros"] }
+ruff_python_ast = "=0.0.4"
+ruff_python_parser = "=0.0.4"
 toml = "0.9.8"
 tracing = "0.1.41"
 tracing-log = "0.2.0"
