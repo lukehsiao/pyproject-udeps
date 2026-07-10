@@ -69,7 +69,9 @@ fn get_dependencies(file: &Path, deps: &DepType) -> Result<Option<BTreeMap<Strin
 
     // TODO: map package name to actual module name.
     // Ref: https://stackoverflow.com/a/54853084
-    let value = toml.parse::<Value>()?;
+    // toml 0.9 parses `Value` from value syntax, not document syntax, so a
+    // document must go through `Table`.
+    let value = Value::Table(toml.parse::<toml::Table>()?);
     let dep_table: Vec<String> = match deps {
         DepType::Main => {
             match value
