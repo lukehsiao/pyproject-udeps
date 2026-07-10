@@ -21,7 +21,6 @@ clap-verbosity-flag = "3.0.4"
 flume = "0.11.1"
 ignore = "0.4.24"
 log = "0.4.28"
-pep-508 = "0.4.0"
 phf = { version = "0.13.1", features = ["macros"] }
 ruff_python_ast = "=0.0.4"
 ruff_python_parser = "=0.0.4"
