@@ -171,6 +171,31 @@ scikit-learn = "^1.4"
 }
 
 #[test]
+fn bare_dbt_adapters_import_does_not_crash() {
+    let dir = project(&[
+        ("pyproject.toml", POETRY_MANIFEST),
+        ("main.py", "import dbt.adapters\n"),
+    ]);
+    cmd(&dir).assert().code(1).stdout("requests\n");
+}
+
+#[test]
+fn dbt_adapter_import_marks_adapter_package_used() {
+    let dir = project(&[
+        (
+            "pyproject.toml",
+            r#"
+[tool.poetry.dependencies]
+python = "^3.11"
+dbt-postgres = "^1.9"
+"#,
+        ),
+        ("main.py", "import dbt.adapters.postgres\n"),
+    ]);
+    cmd(&dir).assert().code(0).stdout("");
+}
+
+#[test]
 fn ignorefile_filters_reported_dependencies() {
     let dir = project(&[
         ("pyproject.toml", POETRY_MANIFEST),
