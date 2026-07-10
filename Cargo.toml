@@ -1,15 +1,15 @@
 [package]
-name = "poetry-udeps"
+name = "pyproject-udeps"
 version = "0.2.10"
 edition = "2024"
 # ruff_python_parser requires 1.94.
 rust-version = "1.94"
 authors = ["Luke Hsiao <luke@hsiao.dev>"]
 description = "Find unused dependencies in pyproject.toml"
-repository = "https://github.com/lukehsiao/poetry-udeps"
-homepage = "https://github.com/lukehsiao/poetry-udeps"
+repository = "https://github.com/lukehsiao/pyproject-udeps"
+homepage = "https://github.com/lukehsiao/pyproject-udeps"
 license = "BlueOak-1.0.0"
-keywords = ["poetry", "dependencies"]
+keywords = ["python", "pyproject", "poetry", "uv", "dependencies"]
 categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

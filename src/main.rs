@@ -1,5 +1,5 @@
 use clap::Parser;
-use poetry_udeps::{Cli, run};
+use pyproject_udeps::{Cli, run};
 use std::process;
 use tracing_log::AsTrace;
 

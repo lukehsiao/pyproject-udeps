@@ -852,29 +852,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
 
 [[package]]
-name = "poetry-udeps"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "clap",
- "clap-verbosity-flag",
- "flume",
- "hegeltest",
- "ignore",
- "log",
- "phf 0.13.1",
- "pretty_assertions",
- "ruff_python_ast",
- "ruff_python_parser",
- "tempfile",
- "toml",
- "tracing",
- "tracing-log",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -938,6 +915,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "pyproject-udeps"
+version = "0.2.10"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "clap",
+ "clap-verbosity-flag",
+ "flume",
+ "hegeltest",
+ "ignore",
+ "log",
+ "phf 0.13.1",
+ "pretty_assertions",
+ "ruff_python_ast",
+ "ruff_python_parser",
+ "tempfile",
+ "toml",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]

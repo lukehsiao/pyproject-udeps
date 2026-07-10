@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "lukehsiao/poetry-udeps",
+      "repo": "lukehsiao/pyproject-udeps",
       "disableThanks": true
     }
   ],

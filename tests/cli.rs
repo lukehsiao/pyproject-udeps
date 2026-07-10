@@ -25,7 +25,7 @@ fn project(files: &[(&str, &str)]) -> TempDir {
 }
 
 fn cmd(dir: &TempDir) -> Command {
-    let mut cmd = Command::cargo_bin("poetry-udeps").unwrap();
+    let mut cmd = Command::cargo_bin("pyproject-udeps").unwrap();
     cmd.current_dir(dir.path());
     cmd
 }
