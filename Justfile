@@ -3,10 +3,21 @@
 _default:
 	@just --list
 
-# Runs clippy on the sources
+# Runs linters on the sources
 [group('dev')]
 check:
 	cargo clippy --all-targets --all-features --locked -- -W clippy::pedantic -D warnings
+	zizmor .
+
+# Runs the test suite
+[group('dev')]
+test:
+	cargo nextest run
+
+# Runs the test suite to compute coverage
+[group('dev')]
+coverage *FLAGS:
+	cargo llvm-cov nextest {{FLAGS}}
 
 # check security advisories
 [group('dev')]
@@ -27,6 +38,14 @@ fmt:
 [group('dev')]
 watch:
 	bacon
+
+# Update all dependencies
+[group('build')]
+upgrade:
+	pnpm up --recursive
+	pnpm install
+	cargo upgrade
+	cargo update
 
 # Install release tooling
 [group('build')]
