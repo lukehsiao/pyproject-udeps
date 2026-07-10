@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [`406b665`](https://github.com/lukehsiao/pyproject-udeps/commit/406b665a4c72680a047d172ceee0ad179fda8d69) - **fix**: add the `pyserial` -> `serial` alias to avoid a false positive.
+- [`406b665`](https://github.com/lukehsiao/pyproject-udeps/commit/406b665a4c72680a047d172ceee0ad179fda8d69) - **chore**: add the `pyserial` -> `serial` alias to avoid a false positive.
 
 <pre>
 $ git-stats v0.3.1..v0.3.2

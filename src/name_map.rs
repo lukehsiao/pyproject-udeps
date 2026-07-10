@@ -47,6 +47,7 @@ pub static KNOWN_NAMES: phf::OrderedMap<&str, &str> = phf_ordered_map! {
     "python-jose" => "jose",
     "python-multipart" => "multipart",
     "python-slugify" => "slugify",
+    "python-ulid" => "ulid",
     "pytorch-nlp" => "torchnlp",
     "pyvespa" => "vespa",
     "scikit-learn" => "sklearn",
