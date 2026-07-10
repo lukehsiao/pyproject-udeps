@@ -14,10 +14,10 @@ use toml::Value;
 use tracing::{debug, error, info};
 use xshell::{Shell, cmd};
 
+mod imports;
 mod name_map;
-mod parser;
+use crate::imports::{Import, extract_imports};
 use crate::name_map::KNOWN_NAMES;
-use crate::parser::{ImportStatement, parse_python_file};
 
 const IGNORE_FILE: &str = ".poetryudepsignore";
 
@@ -200,7 +200,7 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
     let mut dev_deps = get_dependencies(pyproject_path, &DepType::Dev)?.unwrap_or_default();
     info!(?dev_deps);
 
-    let (tx, rx) = flume::bounded::<(ImportStatement, PathBuf)>(100);
+    let (tx, rx) = flume::bounded::<(Import, PathBuf)>(100);
 
     // Setup main thread for stdout
     let check_dev_deps = cli.dev;
@@ -208,47 +208,43 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
     let stdout_thread = thread::spawn(move || -> io::Result<Option<Vec<String>>> {
         for (import, path) in rx {
             debug!(
-                package = import.package,
                 module = import.module,
+                item = ?import.item,
                 path = path.to_str(),
                 "Checking import",
             );
             // Packages may have several aliases
             let mut aliases = vec![];
-            if !import.module.is_empty() {
+            if let Some(item) = &import.item {
                 // Google-style package naming
-                aliases.push(format!(
-                    "{}-{}",
-                    import.package.replace('.', "-"),
-                    import.module
-                ));
+                aliases.push(format!("{}-{}", import.module.replace('.', "-"), item));
             }
             // DBT Adapters
-            if import.package.starts_with("dbt.adapters") {
-                let parts: Vec<&str> = import.package.split('.').collect();
+            if import.module.starts_with("dbt.adapters") {
+                let parts: Vec<&str> = import.module.split('.').collect();
                 // A bare `import dbt.adapters` has no adapter segment.
                 if parts.len() >= 3 {
                     aliases.push([parts[0], parts[2]].join("-"));
                 }
             }
             // SQLAlchemy Extentions
-            if import.package.contains('.') {
-                aliases.push(import.package.split('.').collect::<Vec<&str>>().join("-"));
+            if import.module.contains('.') {
+                aliases.push(import.module.split('.').collect::<Vec<&str>>().join("-"));
             }
-            if let Some(p) = import.package.split_once('.') {
+            if let Some(p) = import.module.split_once('.') {
                 aliases.push(p.0.to_string());
             }
 
             // Include parent packages after 1 level deep.
             // This is to catch things like
             // `from google.auth.transport import requests` --> google-auth
-            let v: Vec<&str> = import.package.split('.').collect();
+            let v: Vec<&str> = import.module.split('.').collect();
             if v.len() >= 2 {
                 aliases.push(format!("{}-{}", v[0], v[1]));
             }
 
             // Just the package
-            aliases.push(import.package);
+            aliases.push(import.module);
 
             for alias in aliases {
                 if main_deps.contains_key(&alias)
@@ -330,7 +326,7 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
                     let mut buf = Vec::new();
                     file.read_to_end(&mut buf).unwrap();
                     let contents = String::from_utf8_lossy(&buf);
-                    let v = parse_python_file(&contents).unwrap();
+                    let v = extract_imports(&contents);
 
                     let path = dir.into_path();
                     for import in v {
@@ -361,7 +357,7 @@ pub fn run(cli: &Cli) -> Result<Option<Vec<String>>> {
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf).unwrap();
                 let contents = String::from_utf8_lossy(&buf);
-                let v = parse_python_file(&contents).unwrap();
+                let v = extract_imports(&contents);
 
                 let path = dir.into_path();
                 for import in v {

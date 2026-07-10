@@ -201,7 +201,11 @@ fn non_utf8_python_file_does_not_crash() {
         ("pyproject.toml", POETRY_MANIFEST),
         ("main.py", "import requests\n"),
     ]);
-    fs::write(dir.path().join("legacy.py"), b"import os\n\xff\xfe garbage\n").unwrap();
+    fs::write(
+        dir.path().join("legacy.py"),
+        b"import os\n\xff\xfe garbage\n",
+    )
+    .unwrap();
     cmd(&dir).assert().code(0).stdout("");
 }
 
