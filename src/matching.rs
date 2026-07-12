@@ -31,7 +31,7 @@ impl DependencyIndex {
             keys.entry(package.clone())
                 .or_default()
                 .insert(package.clone());
-            if let Some(alias) = import_name_for(&package) {
+            for alias in import_names_for(&package) {
                 keys.entry(alias).or_default().insert(package.clone());
             }
             remaining.insert(package);
@@ -63,15 +63,43 @@ impl DependencyIndex {
     }
 }
 
-/// The import name a package is known or likely to use, when it differs
-/// from the package name itself.
-fn import_name_for(package: &str) -> Option<String> {
-    if let Some(known) = KNOWN_NAMES.get(package) {
-        return Some((*known).to_string());
+/// PEP 503 style normalization: lowercase, with runs of `-`, `_`, and `.`
+/// collapsed to a single `-`. Declared names vary in case and separators
+/// (`PyYAML`, `pyyaml`, `ruamel.yaml`), but all spellings identify the same
+/// package on the index, so the name map is keyed by the normalized form.
+fn normalize(package: &str) -> String {
+    let mut out = String::with_capacity(package.len());
+    let mut prev_sep = false;
+    for c in package.chars() {
+        if matches!(c, '-' | '_' | '.') {
+            if !prev_sep {
+                out.push('-');
+            }
+            prev_sep = true;
+        } else {
+            out.extend(c.to_lowercase());
+            prev_sep = false;
+        }
     }
-    package
-        .contains('-')
-        .then(|| package.replace('-', "_").to_lowercase())
+    out
+}
+
+/// The import names a package is known or likely to use, when they differ
+/// from the package name itself.
+fn import_names_for(package: &str) -> Vec<String> {
+    let normalized = normalize(package);
+    let mut names = Vec::new();
+    if let Some(known) = KNOWN_NAMES.get(normalized.as_str()) {
+        names.push((*known).to_string());
+    }
+    // Modules conventionally swap dashes for underscores (python-dateutil is
+    // an exception handled by the map). Lowercasing also lets a declared
+    // "Flask" match `import flask` without a dedicated map entry.
+    let underscored = normalized.replace('-', "_");
+    if underscored != package {
+        names.push(underscored);
+    }
+    names
 }
 
 /// Package names an import could correspond to.
@@ -93,12 +121,15 @@ fn candidate_keys(import: &Import) -> Vec<String> {
         candidates.push([parts[0], parts[2]].join("-"));
     }
 
-    // SQLAlchemy-style extensions: sqlalchemy.ext -> sqlalchemy-ext
+    // Every dotted-prefix join, so a deep import like
+    // `from airflow.providers.common.sql.hooks.sql import X` can match a
+    // package keyed as airflow-providers-common-sql, not just the full path
+    // (sqlalchemy.ext -> sqlalchemy-ext) or the two-level parent
+    // (`from google.auth.transport import requests` -> google-auth).
     if parts.len() >= 2 {
-        candidates.push(parts.join("-"));
-        // Parent packages one level deep:
-        // `from google.auth.transport import requests` -> google-auth
-        candidates.push(format!("{}-{}", parts[0], parts[1]));
+        for k in 2..=parts.len() {
+            candidates.push(parts[..k].join("-"));
+        }
         // The top-level package: google.cloud -> google
         candidates.push((*parts.first().expect("split is never empty")).to_string());
     }
@@ -155,6 +186,25 @@ mod test {
     fn google_style_from_import_matches() {
         let mut idx = index(&["google-cloud-bigquery"]);
         idx.mark_used(&from("google.cloud", "bigquery"));
+        assert_eq!(idx.unused(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn declared_case_and_separators_are_normalized() {
+        let mut idx = index(&["Flask", "PyYAML", "ruamel.yaml.clib"]);
+        idx.mark_used(&plain("flask"));
+        idx.mark_used(&plain("yaml"));
+        idx.mark_used(&plain("ruamel_yaml_clib"));
+        assert_eq!(idx.unused(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn deep_import_matches_intermediate_prefix_join() {
+        // The map points apache-airflow-providers-common-sql at the
+        // airflow-providers-common-sql join, which a deep import must
+        // produce even when the module path continues past it.
+        let mut idx = index(&["apache-airflow-providers-common-sql"]);
+        idx.mark_used(&from("airflow.providers.common.sql.hooks.sql", "X"));
         assert_eq!(idx.unused(), Vec::<String>::new());
     }
 
@@ -225,10 +275,13 @@ mod properties {
     // it can serve as an oracle for the index's bookkeeping.
     fn key_set(package: &str) -> BTreeSet<String> {
         let mut keys = BTreeSet::from([package.to_string()]);
-        if let Some(known) = crate::name_map::KNOWN_NAMES.get(package) {
+        let normalized = normalize(package);
+        if let Some(known) = crate::name_map::KNOWN_NAMES.get(normalized.as_str()) {
             keys.insert((*known).to_string());
-        } else if package.contains('-') {
-            keys.insert(package.replace('-', "_").to_lowercase());
+        }
+        let underscored = normalized.replace('-', "_");
+        if underscored != package {
+            keys.insert(underscored);
         }
         keys
     }
