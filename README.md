@@ -239,10 +239,12 @@ Notes from the audit, in the same order:
   Accuracy rests on two things: [`src/name_map.rs`](src/name_map.rs) is audited against the wheel contents of the 1,500 most-downloaded PyPI packages (see [contrib/name-map-audit](contrib/name-map-audit/)), and the matcher accepts any dotted prefix of an import path, so deep namespace imports find their package.
   Expect the occasional false positive on packages the map does not know yet, and please send a PR when you hit one.
 - **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 16 packages with 7 false positives.
-  In-venv it has no false positives, but crediting whole namespace packages means it misses `ruamel.yaml.clib` and both `opentelemetry-*` extras.
+  In-venv it has no false positives, but it decides usage by mapping each dependency to the top-level modules its installed distribution claims, which makes namespace siblings indistinguishable.
+  That costs it three of the seven: `ruamel.yaml.clib`'s `top_level.txt` literally lists `ruamel`, which Prefect imports, and `opentelemetry-distro` and `opentelemetry-instrumentation-logging` install into the shared `opentelemetry/` namespace directory that `opentelemetry-api` (genuinely used) also provides.
   It also skips `tests/` by default.
 - **py-unused-deps** requires the project distribution to be installed.
   Its one false positive (`griffe`) is shared with the other metadata-driven tools: griffe 2.x became a metapackage whose importable module ships in `griffelib`, so its metadata claims no modules.
+  It misses `ruamel.yaml.clib` for the same namespace-metadata reason as deptry, and never evaluates the two `opentelemetry-*` packages at all because extras are only considered when passed via its `-e` flag.
 - **creosote**'s five false positives (`apprise`, `dateparser`, `pendulum`, `pydantic_extra_types`, `whenever`) are all imports that sit inside a function body or a conditional branch, which its scanner does not see.
 - **pytomlcleaner** reported nothing at all: zero false positives, but also zero of the seven.
   [Its matching logic](https://github.com/t3an/pytomlcleaner/blob/c8b059a03c5772808a32f09b129f1b7caa925c68/src/pytomlcleaner/cleaner.py#L161) (`is_similar` and `identify_unused`, at the commit matching the 1.0.0 wheel) explains why: every dotted path segment and imported symbol in the codebase becomes a "used" token (4,604 of them here, including single letters), and a dependency is credited as used when any token is a substring of its name or is 60% similar by difflib.
