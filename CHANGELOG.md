@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.5
+
+### Patch Changes
+
+- [`bae4549`](https://github.com/lukehsiao/pyproject-udeps/commit/bae45495ce31c248436361d0581db894ca0a3386) - **fix**: add name-map aliases for `pyyaml`, `python-dateutil`, `pydocket`, `amplitude-analytics`, `opentelemetry-api`, and `opentelemetry-test-utils`, eliminating false positives on projects that import these packages.
+
+<pre>
+$ git-stats v0.3.4..v0.3.5
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        2              7        +208        -63   +145
+Total             2              7        +208        -63   +145
+</pre>
+
 ## 0.3.4
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "pyproject-udeps",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
