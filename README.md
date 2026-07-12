@@ -268,7 +268,9 @@ Running `pyproject-udeps -e` searches the installed environment too, finds the i
 This is a list of cases where unused dependencies were found using `pyproject-udeps`.
 You are welcome to expand it:
 
-- TODO
+- [feat-dev/feat@#6599 ("chore: Remove unused jsonschema dependency, declare attrs")](https://github.com/feast-dev/feast/pull/6599)
+- [mealie-recipes/mealie@#7872 ("chore(deps): remove unused aiofiles dependency")](https://github.com/mealie-recipes/mealie/pull/7872)
+- [mitmproxy/mitmproxy@#8319 ("build(deps): remove unused msgpack dependency")](https://github.com/mitmproxy/mitmproxy/pull/8319)
 
 ## License
 
