@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.4
+
+### Patch Changes
+
+- [`83aed9d`](https://github.com/lukehsiao/pyproject-udeps/commit/83aed9d5f902ad869f08a38619fbaca3b411e737) - **feature**: `pyproject-udeps` and `pyproject-udeps-bin` are now available on the AUR.
+
+<pre>
+$ git-stats v0.3.3..v0.3.4
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        2              6        +187         -6   +181
+Total             2              6        +187         -6   +181
+</pre>
+
 ## 0.3.3
 
 ### Patch Changes

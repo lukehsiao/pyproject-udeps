@@ -1,6 +1,6 @@
 [package]
 name = "pyproject-udeps"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2024"
 # ruff_python_parser requires 1.94.
 rust-version = "1.94"
