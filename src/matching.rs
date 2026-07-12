@@ -146,8 +146,8 @@ mod test {
 
     #[test]
     fn dash_to_underscore_alias_matches() {
-        let mut idx = index(&["python-dateutil"]);
-        idx.mark_used(&plain("python_dateutil"));
+        let mut idx = index(&["typing-extensions"]);
+        idx.mark_used(&plain("typing_extensions"));
         assert_eq!(idx.unused(), Vec::<String>::new());
     }
 

@@ -197,10 +197,10 @@ fn dash_to_underscore_alias_marks_dependency_used() {
             r#"
 [tool.poetry.dependencies]
 python = "^3.11"
-python-dateutil = "^2.9"
+typing-extensions = "^4.12"
 "#,
         ),
-        ("main.py", "import python_dateutil\n"),
+        ("main.py", "import typing_extensions\n"),
     ]);
     cmd(&dir).assert().code(0).stdout("");
 }
