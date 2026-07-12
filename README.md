@@ -182,13 +182,13 @@ Benchmarks were run with [hyperfine](https://github.com/sharkdp/hyperfine) on a 
 
 | Tool | Mean [ms] | Min [ms] | Max [ms] | Relative |
 |:---|---:|---:|---:|---:|
-| `pyproject-udeps` | 218.6 ± 1.8 | 215.0 | 221.6 | 1.00 |
-| `deptry` | 271.4 ± 3.8 | 266.0 | 279.4 | 1.24 ± 0.02 |
-| `py-unused-deps` | 1589.0 ± 10.5 | 1569.2 | 1601.5 | 7.27 ± 0.08 |
-| `creosote` | 2114.2 ± 42.7 | 2082.6 | 2229.2 | 9.67 ± 0.21 |
-| `pytomlcleaner` | 3730.0 ± 64.0 | 3647.9 | 3869.0 | 17.06 ± 0.32 |
-| `pip-extra-reqs` | 4754.5 ± 32.6 | 4719.4 | 4808.0 | 21.75 ± 0.23 |
-| `fawltydeps` | 5405.6 ± 43.3 | 5341.5 | 5463.2 | 24.73 ± 0.28 |
+| `pyproject-udeps` | 217.2 ± 2.3 | 213.4 | 221.0 | 1.00 |
+| `deptry` | 268.8 ± 4.9 | 262.6 | 277.2 | 1.24 ± 0.03 |
+| `py-unused-deps` | 1587.8 ± 9.4 | 1573.7 | 1604.3 | 7.31 ± 0.09 |
+| `creosote` | 2097.7 ± 12.4 | 2075.0 | 2119.7 | 9.66 ± 0.12 |
+| `pytomlcleaner` | 3701.9 ± 31.9 | 3655.6 | 3750.1 | 17.04 ± 0.23 |
+| `pip-extra-reqs` | 4744.7 ± 20.2 | 4716.7 | 4777.0 | 21.84 ± 0.25 |
+| `fawltydeps` | 5402.0 ± 34.2 | 5348.3 | 5456.5 | 24.87 ± 0.31 |
 
 <details>
 <summary>Reproduction commands</summary>
@@ -217,13 +217,13 @@ The chart is generated from [contrib/benchmark.vl.json](contrib/benchmark.vl.jso
 
 Speed only matters if the output is trustworthy, so every reported package was audited by hand against the Prefect source.
 Throughout this audit, "false positive" means a detection error: the tool reported a package that the repository does import.
-Nine declared dependencies are verifiably never imported anywhere in the repository: `aiosqlite`, `jinja2-humanize-extension`, `rfc3339-validator`, `ruamel.yaml.clib`, and `semver` from the main dependencies, plus four never-imported `opentelemetry-*` packages from the `otel` extra.
-A perfect import-scanning tool reports those nine and nothing else.
-Whether each of the nine is safe to actually *remove* is a separate question, revisited after the audit notes.
+Seven declared dependencies are verifiably never imported anywhere in the repository: `aiosqlite`, `jinja2-humanize-extension`, `rfc3339-validator`, `ruamel.yaml.clib`, and `semver` from the main dependencies, plus `opentelemetry-distro` and `opentelemetry-instrumentation-logging` from the `otel` extra.
+A perfect import-scanning tool reports those seven and nothing else.
+Whether each of the seven is safe to actually *remove* is a separate question, revisited after the audit notes.
 
-| Tool | Version | Reported | Verified never-imported (of 9) | False positives |
+| Tool | Version | Reported | Verified never-imported (of 7) | False positives |
 |:---|:---|---:|---:|:---|
-| `pyproject-udeps` | 0.3.4 | 9 | 9 | 0 |
+| `pyproject-udeps` | 0.3.5 | 7 | 7 | 0 |
 | `deptry` | 0.25.1 | 4 | 4 | 0 |
 | `py-unused-deps` | 0.4.2 | 5 | 4 | 1 |
 | `creosote` | 5.2.0 | 9 | 4 | 5 |
@@ -233,15 +233,15 @@ Whether each of the nine is safe to actually *remove* is a separate question, re
 
 Notes from the audit, in the same order:
 
-- **pyproject-udeps** found all nine with no false positives. In fairness: the first run of this benchmark surfaced six missing name-map aliases (for example `pyyaml` → `yaml` and `python-dateutil` → `dateutil`), which were added to [`src/name_map.rs`](src/name_map.rs) before taking these measurements. Expect the occasional false positive on packages the map does not know yet, and please send a PR when you hit one.
-- **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 16 packages with 7 false positives. In-venv it has no false positives, but crediting whole namespace packages means it misses `ruamel.yaml.clib` and all four `opentelemetry-*` extras. It also skips `tests/` by default.
+- **pyproject-udeps** found all seven with no false positives. It correctly credits two `opentelemetry-*` packages that are [imported lazily inside function bodies](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/_internal/metrics.py#L79-L83) deep in `src/prefect/_internal/metrics.py`, a pattern that trips up several of the other tools. Accuracy rests on two things: [`src/name_map.rs`](src/name_map.rs) is audited against the wheel contents of the 1,500 most-downloaded PyPI packages (see [contrib/name-map-audit](contrib/name-map-audit/)), and the matcher accepts any dotted prefix of an import path, so deep namespace imports find their package. Expect the occasional false positive on packages the map does not know yet, and please send a PR when you hit one.
+- **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 16 packages with 7 false positives. In-venv it has no false positives, but crediting whole namespace packages means it misses `ruamel.yaml.clib` and both `opentelemetry-*` extras. It also skips `tests/` by default.
 - **py-unused-deps** requires the project distribution to be installed. Its one false positive (`griffe`) is shared with the other metadata-driven tools: griffe 2.x became a metapackage whose importable module ships in `griffelib`, so its metadata claims no modules.
 - **creosote**'s five false positives (`apprise`, `dateparser`, `pendulum`, `pydantic_extra_types`, `whenever`) are all imports that sit inside a function body or a conditional branch, which its scanner does not see.
-- **pytomlcleaner** reported nothing at all: zero false positives, but also zero of the nine. [Its matching logic](https://github.com/t3an/pytomlcleaner/blob/c8b059a03c5772808a32f09b129f1b7caa925c68/src/pytomlcleaner/cleaner.py#L161) (`is_similar` and `identify_unused`, at the commit matching the 1.0.0 wheel) explains why: every dotted path segment and imported symbol in the codebase becomes a "used" token (4,604 of them here, including single letters), and a dependency is credited as used when any token is a substring of its name or is 60% similar by difflib. At that bar `semver` is credited by the token `ever` and `ruamel.yaml.clib` by `cli`, so on a codebase this large the report is structurally empty.
+- **pytomlcleaner** reported nothing at all: zero false positives, but also zero of the seven. [Its matching logic](https://github.com/t3an/pytomlcleaner/blob/c8b059a03c5772808a32f09b129f1b7caa925c68/src/pytomlcleaner/cleaner.py#L161) (`is_similar` and `identify_unused`, at the commit matching the 1.0.0 wheel) explains why: every dotted path segment and imported symbol in the codebase becomes a "used" token (4,604 of them here, including single letters), and a dependency is credited as used when any token is a substring of its name or is 60% similar by difflib. At that bar `semver` is credited by the token `ever` and `ruamel.yaml.clib` by `cli`, so on a codebase this large the report is structurally empty.
 - **pip-extra-reqs** false-positived on `griffe` (metapackage, as above) and `pendulum`, which is guarded by a `python_version<'3.13'` marker and therefore not installed in the Python 3.14 venv it inspects.
 - **fawltydeps** checks every declared dependency group by default, so beyond `griffe` it flags 23 dev-group entries: CLI tools that are never imported (`mkdocs-*`, `vale`, `virtualenv`, ...) and Prefect's own workspace packages, including `prefect` itself.
 
-Now, back to whether the nine are safe to remove. Most are not: `aiosqlite` is SQLAlchemy's async SQLite driver selected via connection string, `jinja2-humanize-extension` is loaded by a string module path in a Jinja environment, `rfc3339-validator` is a jsonschema format plugin, and `ruamel.yaml.clib` is a C accelerator. All are load-bearing without ever being imported. Reporting them is not a false positive, since the claim "never imported" is true, but deleting them would break Prefect, which is exactly what an ignorefile (or `--virtualenv`) is for. Only `semver` has no visible use in the repository at all.
+Now, back to whether the seven are safe to remove. Six are not, and the failure modes differ. Two break loudly: `aiosqlite` is SQLAlchemy's async SQLite driver, selected by the [`sqlite+aiosqlite://` connection string](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/settings/models/_defaults.py#L77), and `jinja2-humanize-extension` is [loaded by a string module path](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/server/utilities/user_templates.py#L82) when Prefect builds its Jinja environment. Four degrade silently, which is worse: jsonschema imports `rfc3339-validator` [under `contextlib.suppress(ImportError)`](https://github.com/python-jsonschema/jsonschema/blob/v4.26.0/jsonschema/_format.py#L393-L402) to register its `date-time` format check, so without it [Prefect's parameter validation](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/utilities/schema_tools/validation.py#L56) quietly stops rejecting malformed timestamps; [`ruamel.yaml.clib`](https://pypi.org/project/ruamel.yaml.clib/) is the C accelerator behind ruamel.yaml, so parsing just gets slower; and `opentelemetry-distro` and `opentelemetry-instrumentation-logging` are activated through entry points by `opentelemetry-instrument`, which [Prefect's own load-testing harness launches the server under](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/load_testing/run-server.sh#L87), so telemetry auto-configuration and log instrumentation vanish without an error. All six are load-bearing without ever being imported. Reporting them is not a false positive, since the claim "never imported" is true, but they are exactly what an ignorefile (or `--virtualenv`) is for. Only `semver` has no visible use in the repository at all.
 
 ## Trophy Case
 
