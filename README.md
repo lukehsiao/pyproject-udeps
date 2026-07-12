@@ -25,8 +25,9 @@ It works with [Poetry](https://python-poetry.org/), [uv](https://docs.astral.sh/
 It was previously published as `poetry-udeps`.
 
 Python dependencies do not always map 1:1 with their import names.
-Consequently, it is _likely_ that you will see false positives.
-Hopefully, the list of positives is small enough for this tool to be useful, and to be easy to manually audit.
+Consequently, it is _likely_ that you will see false positives: packages flagged as unused even though your code imports them under a name the tool does not recognize.
+You will also see packages that are correctly flagged as never imported but still do something at runtime (e.g., database drivers selected via connection string); those are not detection errors, just an inherent limit of import-based analysis.
+Hopefully, both lists are small enough for this tool to be useful, and to be easy to manually audit.
 
 Additional name mappings can be added to [`src/name_map.rs`](src/name_map.rs) to improve accuracy.
 
@@ -138,7 +139,7 @@ Dependencies are read from every place they can be declared, so mixed and hybrid
 `pyproject-udeps` supports ignoring packages from a `.pyprojectudepsignore` file (the legacy `.poetryudepsignore` name is also honored).
 This file is a simple text file with 1 package name per line.
 Empty lines, and lines starting with `#` are ignored.
-This is useful when you have packages you know are false positives (e.g., `asyncpg`) and do not want them to continually show up in the output.
+This is useful for packages you never want to see in the output again, whether they are false positives (imported under a name the tool does not know) or genuinely never imported but still needed at runtime (e.g., `asyncpg`, which sqlalchemy selects via connection string without your code ever importing it).
 
 ## How does this work?
 
@@ -215,10 +216,12 @@ The chart is generated from [contrib/benchmark.vl.json](contrib/benchmark.vl.jso
 #### Quality
 
 Speed only matters if the output is trustworthy, so every reported package was audited by hand against the Prefect source.
+Throughout this audit, "false positive" means a detection error: the tool reported a package that the repository does import.
 Nine declared dependencies are verifiably never imported anywhere in the repository: `aiosqlite`, `jinja2-humanize-extension`, `rfc3339-validator`, `ruamel.yaml.clib`, and `semver` from the main dependencies, plus four never-imported `opentelemetry-*` packages from the `otel` extra.
-A perfect tool reports those nine and nothing else.
+A perfect import-scanning tool reports those nine and nothing else.
+Whether each of the nine is safe to actually *remove* is a separate question, revisited after the audit notes.
 
-| Tool | Version | Reported | Verified unused (of 9) | False positives |
+| Tool | Version | Reported | Verified never-imported (of 9) | False positives |
 |:---|:---|---:|---:|:---|
 | `pyproject-udeps` | 0.3.4 | 9 | 9 | 0 |
 | `deptry` | 0.25.1 | 4 | 4 | 0 |
@@ -238,7 +241,7 @@ Notes from the audit, in the same order:
 - **pip-extra-reqs** false-positived on `griffe` (metapackage, as above) and `pendulum`, which is guarded by a `python_version<'3.13'` marker and therefore not installed in the Python 3.14 venv it inspects.
 - **fawltydeps** checks every declared dependency group by default, so beyond `griffe` it flags 23 dev-group entries: CLI tools that are never imported (`mkdocs-*`, `vale`, `virtualenv`, ...) and Prefect's own workspace packages, including `prefect` itself.
 
-Even the nine "real" hits show why this problem cannot be fully automated: `aiosqlite` is SQLAlchemy's async SQLite driver selected via connection string, `jinja2-humanize-extension` is loaded by a string module path in a Jinja environment, `rfc3339-validator` is a jsonschema format plugin, and `ruamel.yaml.clib` is a C accelerator. All are load-bearing without ever being imported, which is exactly what an ignorefile (or `--virtualenv`) is for. Only `semver` has no visible use in the repository at all.
+Now, back to whether the nine are safe to remove. Most are not: `aiosqlite` is SQLAlchemy's async SQLite driver selected via connection string, `jinja2-humanize-extension` is loaded by a string module path in a Jinja environment, `rfc3339-validator` is a jsonschema format plugin, and `ruamel.yaml.clib` is a C accelerator. All are load-bearing without ever being imported. Reporting them is not a false positive, since the claim "never imported" is true, but deleting them would break Prefect, which is exactly what an ignorefile (or `--virtualenv`) is for. Only `semver` has no visible use in the repository at all.
 
 ## Trophy Case
 
