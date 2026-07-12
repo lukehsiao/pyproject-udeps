@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.6
+
+### Patch Changes
+
+- [`9c92b19`](https://github.com/lukehsiao/pyproject-udeps/commit/9c92b19b1553919f4d378bad13a7e922fcdf42b5) - **fix**: the name map was audited against the wheel contents of the 1,500 most-downloaded PyPI packages, adding roughly 190 entries (`pillow` → `PIL`, `pyjwt` → `jwt`, `dnspython` → `dns`, `opencv-python` → `cv2`, and many more).
+
+- [`61844e0`](https://github.com/lukehsiao/pyproject-udeps/commit/61844e00d2df6acc93a29b06261123faa33538e4) - **feat**: declared package names are now matched case-insensitively with `-`, `_`, and `.` treated as equivalent (PEP 503 normalization), and imports now match packages keyed to any dotted prefix of the module path (so `from airflow.providers.common.sql.hooks.sql import X` marks `apache-airflow-providers-common-sql` as used). Together these eliminate whole classes of false positives, like declaring `Flask` while importing `flask`, or importing a deep submodule of a namespace package.
+
+<pre>
+$ git-stats v0.3.5..v0.3.6
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        8             15        +613        -65   +548
+Total             8             15        +613        -65   +548
+</pre>
+
 ## 0.3.5
 
 ### Patch Changes
