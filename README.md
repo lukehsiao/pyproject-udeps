@@ -34,6 +34,7 @@ Additional name mappings can be added to [`src/name_map.rs`](src/name_map.rs) to
 
 -   [Install](#install)
     -   [From crates.io](#from-cratesio)
+    -   [Arch](#arch)
     -   [In GitHub Actions](#in-github-actions)
 -   [Usage](#usage)
 -   [How does this work?](#how-does-this-work)
@@ -54,6 +55,15 @@ Or, with [cargo-binstall](https://github.com/cargo-bins/cargo-binstall) to downl
 
 ```
 cargo binstall pyproject-udeps
+```
+
+### Arch
+
+On Arch Linux, install from the [AUR](https://aur.archlinux.org/) using your preferred helper (e.g. [`paru`](https://github.com/Morganamilo/paru) or [`yay`](https://github.com/Jguer/yay)):
+
+```
+paru -S pyproject-udeps       # builds from source
+paru -S pyproject-udeps-bin   # prebuilt binary
 ```
 
 ### In GitHub Actions
