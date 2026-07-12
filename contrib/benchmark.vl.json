@@ -1,0 +1,115 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "Wall-clock time to check for unused dependencies in PrefectHQ/prefect, per tool. Data from hyperfine; see the Benchmarks section of README.md for the exact commands and environment.",
+  "background": "#FFFCF0",
+  "width": 680,
+  "height": 320,
+  "title": {
+    "text": "Checking for unused dependencies in PrefectHQ/prefect",
+    "subtitle": "563k lines of Python, 57 dependencies. Bars show hyperfine mean over ≥10 runs; whiskers span min–max. Lower is better.",
+    "anchor": "start",
+    "color": "#100F0F",
+    "subtitleColor": "#6F6E69",
+    "fontSize": 16,
+    "subtitleFontSize": 12,
+    "subtitlePadding": 6,
+    "offset": 18
+  },
+  "data": {
+    "values": [
+      {"tool": "pyproject-udeps", "mean": 0.2186, "min": 0.215, "max": 0.2216},
+      {"tool": "deptry", "mean": 0.2714, "min": 0.266, "max": 0.2794},
+      {"tool": "py-unused-deps", "mean": 1.589, "min": 1.5692, "max": 1.6015},
+      {"tool": "creosote", "mean": 2.1142, "min": 2.0826, "max": 2.2292},
+      {"tool": "pytomlcleaner", "mean": 3.73, "min": 3.6479, "max": 3.869},
+      {"tool": "pip-extra-reqs", "mean": 4.7545, "min": 4.7194, "max": 4.808},
+      {"tool": "fawltydeps", "mean": 5.4056, "min": 5.3415, "max": 5.4632}
+    ]
+  },
+  "transform": [
+    {"calculate": "format(datum.mean, '.2f') + ' s'", "as": "label"}
+  ],
+  "encoding": {
+    "x": {
+      "field": "tool",
+      "type": "nominal",
+      "sort": null,
+      "title": null,
+      "axis": {
+        "labelAngle": 0,
+        "labelFontSize": 11.5,
+        "labelColor": "#100F0F",
+        "domainColor": "#6F6E69",
+        "tickColor": "#6F6E69"
+      }
+    }
+  },
+  "layer": [
+    {
+      "mark": {
+        "type": "bar",
+        "width": {"band": 0.62},
+        "cornerRadiusTopLeft": 3,
+        "cornerRadiusTopRight": 3
+      },
+      "encoding": {
+        "y": {
+          "field": "mean",
+          "type": "quantitative",
+          "title": "Time (seconds)",
+          "scale": {"domainMin": 0},
+          "axis": {
+            "grid": true,
+            "gridColor": "#E6E4D9",
+            "labelFontSize": 11,
+            "labelColor": "#6F6E69",
+            "titleColor": "#100F0F",
+            "titleFontSize": 12,
+            "domainColor": "#6F6E69",
+            "tickColor": "#6F6E69"
+          }
+        },
+        "color": {
+          "condition": {
+            "test": "datum.tool === 'pyproject-udeps'",
+            "value": "#AF3029"
+          },
+          "value": "#205EA6"
+        }
+      }
+    },
+    {
+      "mark": {"type": "rule", "color": "#100F0F", "strokeWidth": 1.2},
+      "encoding": {
+        "y": {"field": "min", "type": "quantitative"},
+        "y2": {"field": "max"}
+      }
+    },
+    {
+      "mark": {"type": "tick", "color": "#100F0F", "width": 7, "thickness": 1.2},
+      "encoding": {"y": {"field": "min", "type": "quantitative"}}
+    },
+    {
+      "mark": {"type": "tick", "color": "#100F0F", "width": 7, "thickness": 1.2},
+      "encoding": {"y": {"field": "max", "type": "quantitative"}}
+    },
+    {
+      "mark": {
+        "type": "text",
+        "dy": -8,
+        "fontSize": 11.5,
+        "fontWeight": 600,
+        "color": "#100F0F"
+      },
+      "encoding": {
+        "y": {"field": "max", "type": "quantitative"},
+        "text": {"field": "label"}
+      }
+    }
+  ],
+  "config": {
+    "font": "Helvetica, Arial, sans-serif",
+    "view": {"stroke": null},
+    "axis": {"gridDash": []}
+  }
+}
