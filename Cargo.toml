@@ -31,7 +31,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
-hegeltest = "0.33.1"
+hegeltest = "0.47.0"
 pretty_assertions = "1.4.1"
 tempfile = "3.27.0"
 
