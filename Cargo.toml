@@ -22,7 +22,7 @@ flume = "0.12.0"
 ignore = "0.4.33"
 log = "0.4.34"
 phf = { version = "0.14.0", features = ["macros"] }
-ruff_python_ast = "=0.0.11"
+ruff_python_ast = "=0.0.14"
 ruff_python_parser = "=0.0.11"
 toml = "1.1.4"
 tracing = "0.1.44"

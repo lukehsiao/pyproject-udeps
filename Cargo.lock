@@ -205,6 +205,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "char_str"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9cba78a5abb515610e10af297615434b019755b5d7be14e559ff5340dff50c4"
+dependencies = [
+ "castaway",
+ "itoa",
+ "ryu",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -967,7 +978,7 @@ dependencies = [
  "log",
  "phf 0.14.0",
  "pretty_assertions",
- "ruff_python_ast",
+ "ruff_python_ast 0.0.14",
  "ruff_python_parser",
  "tempfile",
  "toml",
@@ -1095,14 +1106,35 @@ dependencies = [
  "aho-corasick",
  "arrayvec",
  "bitflags",
- "char_str",
+ "char_str 0.0.2",
  "compact_str",
  "get-size2",
  "is-macro",
  "memchr",
- "ruff_python_trivia",
- "ruff_source_file",
- "ruff_text_size",
+ "ruff_python_trivia 0.0.11",
+ "ruff_source_file 0.0.11",
+ "ruff_text_size 0.0.11",
+ "rustc-hash",
+ "thin-vec",
+ "thiserror",
+]
+
+[[package]]
+name = "ruff_python_ast"
+version = "0.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6aa1de604c478a790cfbcc9c1fef3060e619ed87dd776c6614862ed7e59dc461"
+dependencies = [
+ "aho-corasick",
+ "arrayvec",
+ "bitflags",
+ "char_str 0.0.4",
+ "compact_str",
+ "is-macro",
+ "memchr",
+ "ruff_python_trivia 0.0.14",
+ "ruff_source_file 0.0.14",
+ "ruff_text_size 0.0.14",
  "rustc-hash",
  "thin-vec",
  "thiserror",
@@ -1119,9 +1151,9 @@ dependencies = [
  "drop_bomb",
  "get-size2",
  "memchr",
- "ruff_python_ast",
- "ruff_python_trivia",
- "ruff_text_size",
+ "ruff_python_ast 0.0.11",
+ "ruff_python_trivia 0.0.11",
+ "ruff_text_size 0.0.11",
  "rustc-hash",
  "stacker",
  "static_assertions",
@@ -1138,8 +1170,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02da0941bb4529c5a4f393f1d7e04421f582ae2d9992df4d9ccb05f6dba820b5"
 dependencies = [
  "itertools",
- "ruff_source_file",
- "ruff_text_size",
+ "ruff_source_file 0.0.11",
+ "ruff_text_size 0.0.11",
+ "rustc-hash",
+ "unicode-ident",
+]
+
+[[package]]
+name = "ruff_python_trivia"
+version = "0.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "990dadfad3aa3fd63040d98056112e5a377af8ada0c9c7659e8907a4b3c7cb34"
+dependencies = [
+ "itertools",
+ "ruff_source_file 0.0.14",
+ "ruff_text_size 0.0.14",
  "rustc-hash",
  "unicode-ident",
 ]
@@ -1151,7 +1196,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8908271a26103a142c97f752662458c54554782f74f23d9e123b5a46f555c73d"
 dependencies = [
  "memchr",
- "ruff_text_size",
+ "ruff_text_size 0.0.11",
+]
+
+[[package]]
+name = "ruff_source_file"
+version = "0.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed11e9366de40e79707c0e575afd8beffad58ec94c253577d516b8679cf98308"
+dependencies = [
+ "memchr",
+ "ruff_text_size 0.0.14",
 ]
 
 [[package]]
@@ -1162,6 +1217,12 @@ checksum = "e4c87ba4fa867d5a413a6282f5cdaa89d2c347c57b8f01db658440c82866c4bb"
 dependencies = [
  "get-size2",
 ]
+
+[[package]]
+name = "ruff_text_size"
+version = "0.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a4edc941f215495170a1bda0beeeb31db2fdcd67beecfe7f29d94b2663e1965"
 
 [[package]]
 name = "rustc-hash"
