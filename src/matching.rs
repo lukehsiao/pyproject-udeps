@@ -453,6 +453,6 @@ mod properties {
             declared: packages,
             used: BTreeSet::new(),
         };
-        hegel::stateful::run(machine, tc);
+        hegel::stateful::machine(machine).run(tc);
     }
 }
