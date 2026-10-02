@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.10
+
+### Patch Changes
+
+- [`0f600c2`](https://github.com/lukehsiao/pyproject-udeps/commit/0f600c29eef8299dd2ed614c4a86c8855fe5b34b) - **fix**: upgrade `ruff_python_ast` and `ruff_python_parser` to 0.0.16, which raises the minimum supported Rust version to 1.97. Import extraction is unchanged.
+
+<pre>
+$ git-stats v0.3.9..v0.3.10
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        4             17        +226       -325    -99
+Total             4             17        +226       -325    -99
+</pre>
+
 ## 0.3.9
 
 ### Patch Changes
