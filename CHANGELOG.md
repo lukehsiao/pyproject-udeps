@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.11
+
+### Patch Changes
+
+- [`e2168ed`](https://github.com/lukehsiao/pyproject-udeps/commit/e2168ed37e8d5a99e281af9cc94ef7aa37e385c4) - **fix**: the name map now covers the 5,000 most-downloaded PyPI packages and lists every module a package provides, so `import attr` marks `attrs` used, `import bson` marks `pymongo` used, and so on.
+  A deep import below a mapped module now matches too (`from google.protobuf.json_format import X` marks `protobuf` used), as does `from dbt.adapters import postgres` for `dbt-postgres`, and a declared spelling such as `Google_Auth` matches `import google.auth`.
+  A standard-library import no longer marks a backport used, so `unicodedata2` is reported when the code only imports `unicodedata`.
+
+<pre>
+$ git-stats v0.3.10..v0.3.11
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao        2             17       +3571       -601  +2970
+Total             2             17       +3571       -601  +2970
+</pre>
+
 ## 0.3.10
 
 ### Patch Changes
