@@ -267,8 +267,8 @@ mod test {
 mod properties {
     use super::*;
     use crate::testgen::{identifier, module_path};
+    use hegel::TestCase;
     use hegel::generators;
-    use hegel::{Generator as _, TestCase};
     use pretty_assertions::assert_eq;
 
     // Independent re-statement of the alias rule, kept deliberately simple so
@@ -354,7 +354,7 @@ mod properties {
 
         let steps = tc.draw(generators::integers::<usize>().min_value(0).max_value(10));
         for _ in 0..steps {
-            let import = tc.draw(arbitrary_import().print_as_debug());
+            let import = tc.draw(arbitrary_import());
             let before = idx.unused();
             let first = idx.mark_used(&import);
             let after_once = idx.unused();
@@ -413,7 +413,7 @@ mod properties {
         #[allow(clippy::needless_pass_by_value)]
         #[rule]
         fn mark_arbitrary(&mut self, tc: TestCase) {
-            let import = tc.draw(arbitrary_import().print_as_debug());
+            let import = tc.draw(arbitrary_import());
             self.idx.mark_used(&import);
             self.model_mark(&import);
         }
