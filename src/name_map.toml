@@ -1,0 +1,2862 @@
+# Python modules provided by PyPI packages whose module names the naming
+# convention cannot derive. The convention swaps dashes for underscores and
+# lowercases, so `typing-extensions` needs no entry but `pillow` does.
+#
+# Keys are PEP 503 normalized package names: lowercase, with runs of `-`,
+# `_`, and `.` collapsed to a single `-`. Values are module paths as they
+# appear in an import statement, sorted. Importing a listed module, or any
+# module below it, counts as using the package.
+#
+# build.rs rejects unsorted keys and malformed names. The audit in
+# contrib/name-map-audit rewrites this file. It keeps this header and
+# rejects comments anywhere else, so give the reason for an unusual entry
+# in its commit message.
+a2a-sdk = ["a2a"]
+absl-py = ["absl"]
+accessible-pygments = ["a11y_pygments"]
+acryl-datahub = ["datahub", "datahub_provider"]
+adagio = ["adagio_version"]
+adjusttext = ["adjustText"]
+adyen = ["Adyen"]
+aerospike = ["aerospike_helpers"]
+ag-ui-protocol = ["ag_ui"]
+agent-client-protocol = ["acp"]
+agent-framework-core = ["agent_framework"]
+aiosonic = ["aiosonic_utils"]
+aliyun-python-sdk-core = ["aliyunsdkcore"]
+aliyun-python-sdk-kms = ["aliyunsdkkms"]
+aliyun-semantic-conventions = ["aliyun.semconv"]
+allure-python-commons = ["allure", "allure_commons"]
+alpaca-py = ["alpaca"]
+amazon-ion = ["amazon.ionbenchmark"]
+amazon-textract-caller = ["textractcaller"]
+amazon-textract-response-parser = ["a2i", "trp"]
+amazon-textract-textractor = ["textractor"]
+amplitude-analytics = ["amplitude"]
+analytics-python = ["analytics", "segment.analytics"]
+ansible = ["ansible_collections"]
+ansible-core = ["ansible", "ansible_test"]
+ansible-lint = ["ansiblelint"]
+ansicolors = ["colors"]
+antlr4-python3-runtime = ["antlr4"]
+anybadge = ["anybadge_server"]
+apache-airflow = ["airflow"]
+apache-airflow-core = ["airflow"]
+apache-airflow-providers-amazon = ["airflow.providers.amazon"]
+apache-airflow-providers-apache-kafka = ["airflow.providers.apache.kafka"]
+apache-airflow-providers-celery = ["airflow.providers.celery"]
+apache-airflow-providers-cncf-kubernetes = [
+    "airflow.providers.cncf.kubernetes",
+]
+apache-airflow-providers-common-compat = ["airflow.providers.common.compat"]
+apache-airflow-providers-common-io = ["airflow.providers.common.io"]
+apache-airflow-providers-common-sql = ["airflow.providers.common.sql"]
+apache-airflow-providers-databricks = ["airflow.providers.databricks"]
+apache-airflow-providers-datadog = ["airflow.providers.datadog"]
+apache-airflow-providers-docker = ["airflow.providers.docker"]
+apache-airflow-providers-fab = ["airflow.providers.fab"]
+apache-airflow-providers-ftp = ["airflow.providers.ftp"]
+apache-airflow-providers-google = ["airflow.providers.google"]
+apache-airflow-providers-http = ["airflow.providers.http"]
+apache-airflow-providers-imap = ["airflow.providers.imap"]
+apache-airflow-providers-jdbc = ["airflow.providers.jdbc"]
+apache-airflow-providers-microsoft-azure = [
+    "airflow.providers.microsoft.azure",
+]
+apache-airflow-providers-microsoft-fabric = [
+    "airflow.providers.microsoft.fabric",
+]
+apache-airflow-providers-microsoft-mssql = [
+    "airflow.providers.microsoft.mssql",
+]
+apache-airflow-providers-mongo = ["airflow.providers.mongo"]
+apache-airflow-providers-mysql = ["airflow.providers.mysql"]
+apache-airflow-providers-odbc = ["airflow.providers.odbc"]
+apache-airflow-providers-openlineage = ["airflow.providers.openlineage"]
+apache-airflow-providers-pagerduty = ["airflow.providers.pagerduty"]
+apache-airflow-providers-postgres = ["airflow.providers.postgres"]
+apache-airflow-providers-sftp = ["airflow.providers.sftp"]
+apache-airflow-providers-slack = ["airflow.providers.slack"]
+apache-airflow-providers-smtp = ["airflow.providers.smtp"]
+apache-airflow-providers-snowflake = ["airflow.providers.snowflake"]
+apache-airflow-providers-sqlite = ["airflow.providers.sqlite"]
+apache-airflow-providers-ssh = ["airflow.providers.ssh"]
+apache-airflow-providers-standard = ["airflow.providers.standard"]
+apache-airflow-task-sdk = ["airflow.sdk"]
+apache-libcloud = ["libcloud"]
+apache-sedona = ["sedona"]
+apache-tvm-ffi = ["tvm_ffi"]
+apkinspector = ["apkInspector", "apkInspectorCLI"]
+app-store-server-library = ["appstoreserverlibrary"]
+appium-python-client = ["appium"]
+argon2-cffi = ["argon2"]
+arize-phoenix = ["phoenix"]
+arize-phoenix-client = ["phoenix.client"]
+arize-phoenix-evals = ["phoenix.evals"]
+arize-phoenix-otel = ["phoenix.otel"]
+astronomer-cosmos = ["cosmos"]
+atlassian-python-api = ["atlassian"]
+atpublic = ["public"]
+attrs = ["attr"]
+audioop-lts = ["audioop"]
+auth0-python = ["auth0"]
+authzed = [
+    "buf.validate.validate_pb2",
+    "buf.validate.validate_pb2_grpc",
+    "grpcutil",
+    "protoc_gen_openapiv2.options.annotations_pb2",
+    "protoc_gen_openapiv2.options.openapiv2_pb2",
+    "validate.validate_pb2",
+]
+autobahn = [
+    "twisted.plugins.autobahn_endpoints",
+    "twisted.plugins.autobahn_twistd",
+]
+avro-gen3 = ["avrogen"]
+aws-cdk-cloud-assembly-schema = ["aws_cdk.cloud_assembly_schema"]
+aws-cdk-lib = ["aws_cdk"]
+aws-msk-iam-sasl-signer-python = ["aws_msk_iam_sasl_signer"]
+aws-opentelemetry-distro = [
+    "amazon.opentelemetry.distro.always_record_sampler",
+    "amazon.opentelemetry.distro.attribute_propagating_span_processor",
+    "amazon.opentelemetry.distro.attribute_propagating_span_processor_builder",
+    "amazon.opentelemetry.distro.attribute_redacting_span_processor",
+    "amazon.opentelemetry.distro.aws_batch_unsampled_span_processor",
+    "amazon.opentelemetry.distro.aws_lambda_span_processor",
+    "amazon.opentelemetry.distro.aws_metric_attributes_span_exporter",
+    "amazon.opentelemetry.distro.aws_metric_attributes_span_exporter_builder",
+    "amazon.opentelemetry.distro.aws_opentelemetry_configurator",
+    "amazon.opentelemetry.distro.aws_opentelemetry_distro",
+    "amazon.opentelemetry.distro.aws_span_metrics_processor",
+    "amazon.opentelemetry.distro.aws_span_metrics_processor_builder",
+    "amazon.opentelemetry.distro.debugger",
+    "amazon.opentelemetry.distro.exporter.aws.metrics.aws_cloudwatch_emf_exporter",
+    "amazon.opentelemetry.distro.exporter.aws.metrics.base_emf_exporter",
+    "amazon.opentelemetry.distro.exporter.aws.metrics.console_emf_exporter",
+    "amazon.opentelemetry.distro.exporter.console.logs.compact_console_log_exporter",
+    "amazon.opentelemetry.distro.exporter.otlp.aws.common.aws_auth_session",
+    "amazon.opentelemetry.distro.exporter.otlp.aws.common.aws_sigv4_session_factory",
+    "amazon.opentelemetry.distro.exporter.otlp.aws.logs.otlp_aws_log_record_exporter",
+    "amazon.opentelemetry.distro.exporter.otlp.aws.metrics.otlp_aws_metric_exporter",
+    "amazon.opentelemetry.distro.exporter.otlp.aws.traces.otlp_aws_span_exporter",
+    "amazon.opentelemetry.distro.gen_ai_nested_client_span_processor",
+    "amazon.opentelemetry.distro.instrumentation",
+    "amazon.opentelemetry.distro.llo_handler",
+    "amazon.opentelemetry.distro.metric_attribute_generator",
+    "amazon.opentelemetry.distro.opentelemetry_lite_sdk",
+    "amazon.opentelemetry.distro.otlp_udp_exporter",
+    "amazon.opentelemetry.distro.presigned_aws_url",
+    "amazon.opentelemetry.distro.presigned_aws_url_parser",
+    "amazon.opentelemetry.distro.presigned_url_attributor",
+    "amazon.opentelemetry.distro.regional_resource_arn_parser",
+    "amazon.opentelemetry.distro.s3_presigned_url_attributor",
+    "amazon.opentelemetry.distro.sampler.aws_xray_remote_sampler",
+    "amazon.opentelemetry.distro.scope_based_exporter",
+    "amazon.opentelemetry.distro.scope_based_filtering_view",
+    "amazon.opentelemetry.distro.serviceevents",
+    "amazon.opentelemetry.distro.sqs_url_parser",
+    "amazon.opentelemetry.distro.version",
+]
+aws-psycopg2 = ["psycopg2"]
+aws-sam-cli = ["samcli"]
+aws-sam-translator = ["samtranslator"]
+awsiotsdk = ["awsiot"]
+awslambdaric = ["runtime_client"]
+awsume = ["awsume_autocomplete"]
+azure-common = ["azure.profiles"]
+azure-core-tracing-opentelemetry = [
+    "azure.core.tracing.ext.opentelemetry_span",
+]
+azure-cosmosdb-nspkg = ["azure.cosmosdb"]
+azure-datalake-store = ["azure.datalake"]
+azure-functions-durable = ["azure.durable_functions"]
+azure-multiapi-storage = ["azure.multiapi"]
+azure-schemaregistry-avroserializer = ["azure.schemaregistry.serializer"]
+azure-servicemanagement-legacy = ["azure.servicemanagement"]
+azure-storage-file-datalake = ["azure.storage.filedatalake"]
+azure-storage-file-share = ["azure.storage.fileshare"]
+azureml-core = ["azureml.data", "azureml.exceptions", "azureml.history"]
+backports-datetime-fromisoformat = ["backports.datetime_fromisoformat"]
+backports-functools-lru-cache = ["backports.functools_lru_cache"]
+bazel-runfiles = ["runfiles"]
+bc-detect-secrets = ["detect_secrets"]
+bc-python-hcl2 = ["hcl2"]
+bce-python-sdk = ["baidubce"]
+beautifulsoup4 = ["bs4"]
+bgutil-ytdlp-pot-provider = [
+    "yt_dlp_plugins.extractor.getpot_bgutil",
+    "yt_dlp_plugins.extractor.getpot_bgutil_http",
+    "yt_dlp_plugins.extractor.getpot_bgutil_script",
+]
+biopython = ["Bio", "BioSQL"]
+black = ["blackd", "blib2to3"]
+blender-mcp = ["blender_mcp_shim"]
+boa-str = ["boa"]
+boolean-py = ["boolean"]
+boto3-stubs = ["mypy_boto3_iam"]
+boto3-stubs-full = [
+    "mypy_boto3_accessanalyzer",
+    "mypy_boto3_account",
+    "mypy_boto3_account_access",
+    "mypy_boto3_acm",
+    "mypy_boto3_acm_pca",
+    "mypy_boto3_agent_registry",
+    "mypy_boto3_agent_registry_control",
+    "mypy_boto3_aiops",
+    "mypy_boto3_amp",
+    "mypy_boto3_amplify",
+    "mypy_boto3_amplifybackend",
+    "mypy_boto3_amplifyuibuilder",
+    "mypy_boto3_apigateway",
+    "mypy_boto3_apigatewaymanagementapi",
+    "mypy_boto3_apigatewayv2",
+    "mypy_boto3_appconfig",
+    "mypy_boto3_appconfigdata",
+    "mypy_boto3_appfabric",
+    "mypy_boto3_appflow",
+    "mypy_boto3_appintegrations",
+    "mypy_boto3_application_autoscaling",
+    "mypy_boto3_application_insights",
+    "mypy_boto3_application_signals",
+    "mypy_boto3_applicationcostprofiler",
+    "mypy_boto3_appmesh",
+    "mypy_boto3_apprunner",
+    "mypy_boto3_appstream",
+    "mypy_boto3_appsync",
+    "mypy_boto3_arc_region_switch",
+    "mypy_boto3_arc_zonal_shift",
+    "mypy_boto3_artifact",
+    "mypy_boto3_athena",
+    "mypy_boto3_auditmanager",
+    "mypy_boto3_autoscaling",
+    "mypy_boto3_autoscaling_plans",
+    "mypy_boto3_b2bi",
+    "mypy_boto3_backup",
+    "mypy_boto3_backup_gateway",
+    "mypy_boto3_backupsearch",
+    "mypy_boto3_batch",
+    "mypy_boto3_bcm_dashboards",
+    "mypy_boto3_bcm_data_exports",
+    "mypy_boto3_bcm_pricing_calculator",
+    "mypy_boto3_bcm_recommended_actions",
+    "mypy_boto3_bedrock",
+    "mypy_boto3_bedrock_agent",
+    "mypy_boto3_bedrock_agent_runtime",
+    "mypy_boto3_bedrock_agentcore",
+    "mypy_boto3_bedrock_agentcore_control",
+    "mypy_boto3_bedrock_data_automation",
+    "mypy_boto3_bedrock_data_automation_runtime",
+    "mypy_boto3_bedrock_runtime",
+    "mypy_boto3_billing",
+    "mypy_boto3_billingconductor",
+    "mypy_boto3_braket",
+    "mypy_boto3_budgets",
+    "mypy_boto3_ce",
+    "mypy_boto3_chatbot",
+    "mypy_boto3_chime",
+    "mypy_boto3_chime_sdk_identity",
+    "mypy_boto3_chime_sdk_media_pipelines",
+    "mypy_boto3_chime_sdk_meetings",
+    "mypy_boto3_chime_sdk_messaging",
+    "mypy_boto3_chime_sdk_voice",
+    "mypy_boto3_cleanrooms",
+    "mypy_boto3_cleanroomsml",
+    "mypy_boto3_cloud9",
+    "mypy_boto3_cloudcontrol",
+    "mypy_boto3_clouddirectory",
+    "mypy_boto3_cloudformation",
+    "mypy_boto3_cloudfront",
+    "mypy_boto3_cloudfront_keyvaluestore",
+    "mypy_boto3_cloudhsm",
+    "mypy_boto3_cloudhsmv2",
+    "mypy_boto3_cloudsearch",
+    "mypy_boto3_cloudsearchdomain",
+    "mypy_boto3_cloudtrail",
+    "mypy_boto3_cloudtrail_data",
+    "mypy_boto3_cloudwatch",
+    "mypy_boto3_cloudwatchomni",
+    "mypy_boto3_codeartifact",
+    "mypy_boto3_codebuild",
+    "mypy_boto3_codecatalyst",
+    "mypy_boto3_codecommit",
+    "mypy_boto3_codeconnections",
+    "mypy_boto3_codedeploy",
+    "mypy_boto3_codeguru_reviewer",
+    "mypy_boto3_codeguru_security",
+    "mypy_boto3_codeguruprofiler",
+    "mypy_boto3_codepipeline",
+    "mypy_boto3_codestar_connections",
+    "mypy_boto3_codestar_notifications",
+    "mypy_boto3_cognito_identity",
+    "mypy_boto3_cognito_idp",
+    "mypy_boto3_cognito_sync",
+    "mypy_boto3_comprehend",
+    "mypy_boto3_comprehendmedical",
+    "mypy_boto3_compute_optimizer",
+    "mypy_boto3_compute_optimizer_automation",
+    "mypy_boto3_config",
+    "mypy_boto3_connect",
+    "mypy_boto3_connect_contact_lens",
+    "mypy_boto3_connectcampaigns",
+    "mypy_boto3_connectcampaignsv2",
+    "mypy_boto3_connectcases",
+    "mypy_boto3_connecthealth",
+    "mypy_boto3_connectparticipant",
+    "mypy_boto3_controlcatalog",
+    "mypy_boto3_controltower",
+    "mypy_boto3_cost_optimization_hub",
+    "mypy_boto3_cur",
+    "mypy_boto3_customer_profiles",
+    "mypy_boto3_databrew",
+    "mypy_boto3_dataexchange",
+    "mypy_boto3_datapipeline",
+    "mypy_boto3_datasync",
+    "mypy_boto3_datazone",
+    "mypy_boto3_dax",
+    "mypy_boto3_deadline",
+    "mypy_boto3_detective",
+    "mypy_boto3_devicefarm",
+    "mypy_boto3_devops_agent",
+    "mypy_boto3_devops_guru",
+    "mypy_boto3_directconnect",
+    "mypy_boto3_discovery",
+    "mypy_boto3_dlm",
+    "mypy_boto3_dms",
+    "mypy_boto3_docdb",
+    "mypy_boto3_docdb_elastic",
+    "mypy_boto3_drs",
+    "mypy_boto3_ds",
+    "mypy_boto3_ds_data",
+    "mypy_boto3_dsql",
+    "mypy_boto3_dynamodb",
+    "mypy_boto3_dynamodbstreams",
+    "mypy_boto3_ebs",
+    "mypy_boto3_ec2",
+    "mypy_boto3_ec2_instance_connect",
+    "mypy_boto3_ecr",
+    "mypy_boto3_ecr_public",
+    "mypy_boto3_ecs",
+    "mypy_boto3_efs",
+    "mypy_boto3_eks",
+    "mypy_boto3_eks_auth",
+    "mypy_boto3_elasticache",
+    "mypy_boto3_elasticbeanstalk",
+    "mypy_boto3_elb",
+    "mypy_boto3_elbv2",
+    "mypy_boto3_elementalinference",
+    "mypy_boto3_emr",
+    "mypy_boto3_emr_containers",
+    "mypy_boto3_emr_serverless",
+    "mypy_boto3_endusermessaging",
+    "mypy_boto3_entityresolution",
+    "mypy_boto3_es",
+    "mypy_boto3_eventbridgev2",
+    "mypy_boto3_events",
+    "mypy_boto3_evs",
+    "mypy_boto3_finspace",
+    "mypy_boto3_finspace_data",
+    "mypy_boto3_firehose",
+    "mypy_boto3_fis",
+    "mypy_boto3_fms",
+    "mypy_boto3_forecast",
+    "mypy_boto3_forecastquery",
+    "mypy_boto3_frauddetector",
+    "mypy_boto3_freetier",
+    "mypy_boto3_fsx",
+    "mypy_boto3_gamelift",
+    "mypy_boto3_gameliftstreams",
+    "mypy_boto3_geo_maps",
+    "mypy_boto3_geo_places",
+    "mypy_boto3_geo_routes",
+    "mypy_boto3_glacier",
+    "mypy_boto3_globalaccelerator",
+    "mypy_boto3_glue",
+    "mypy_boto3_grafana",
+    "mypy_boto3_greengrass",
+    "mypy_boto3_greengrassv2",
+    "mypy_boto3_groundstation",
+    "mypy_boto3_guardduty",
+    "mypy_boto3_health",
+    "mypy_boto3_healthlake",
+    "mypy_boto3_iam",
+    "mypy_boto3_iam_toolbox",
+    "mypy_boto3_identitystore",
+    "mypy_boto3_imagebuilder",
+    "mypy_boto3_importexport",
+    "mypy_boto3_inspector",
+    "mypy_boto3_inspector2",
+    "mypy_boto3_inspector_scan",
+    "mypy_boto3_interconnect",
+    "mypy_boto3_internetmonitor",
+    "mypy_boto3_invoicing",
+    "mypy_boto3_iot",
+    "mypy_boto3_iot_data",
+    "mypy_boto3_iot_jobs_data",
+    "mypy_boto3_iot_managed_integrations",
+    "mypy_boto3_iotdeviceadvisor",
+    "mypy_boto3_iotfleetwise",
+    "mypy_boto3_iotsecuretunneling",
+    "mypy_boto3_iotsitewise",
+    "mypy_boto3_iotthingsgraph",
+    "mypy_boto3_iottwinmaker",
+    "mypy_boto3_iotwireless",
+    "mypy_boto3_ivs",
+    "mypy_boto3_ivs_realtime",
+    "mypy_boto3_ivschat",
+    "mypy_boto3_kafka",
+    "mypy_boto3_kafkaconnect",
+    "mypy_boto3_kendra",
+    "mypy_boto3_kendra_ranking",
+    "mypy_boto3_keyspaces",
+    "mypy_boto3_keyspacesstreams",
+    "mypy_boto3_kinesis",
+    "mypy_boto3_kinesis_video_archived_media",
+    "mypy_boto3_kinesis_video_media",
+    "mypy_boto3_kinesis_video_signaling",
+    "mypy_boto3_kinesis_video_webrtc_storage",
+    "mypy_boto3_kinesisanalytics",
+    "mypy_boto3_kinesisanalyticsv2",
+    "mypy_boto3_kinesisvideo",
+    "mypy_boto3_kms",
+    "mypy_boto3_lakeformation",
+    "mypy_boto3_lambda",
+    "mypy_boto3_lambda_core",
+    "mypy_boto3_lambda_microvms",
+    "mypy_boto3_lambda_web",
+    "mypy_boto3_launch_wizard",
+    "mypy_boto3_lex_models",
+    "mypy_boto3_lex_runtime",
+    "mypy_boto3_lexv2_models",
+    "mypy_boto3_lexv2_runtime",
+    "mypy_boto3_license_manager",
+    "mypy_boto3_license_manager_linux_subscriptions",
+    "mypy_boto3_license_manager_user_subscriptions",
+    "mypy_boto3_lightsail",
+    "mypy_boto3_location",
+    "mypy_boto3_logs",
+    "mypy_boto3_lookoutequipment",
+    "mypy_boto3_m2",
+    "mypy_boto3_machinelearning",
+    "mypy_boto3_macie2",
+    "mypy_boto3_mailmanager",
+    "mypy_boto3_managedblockchain",
+    "mypy_boto3_managedblockchain_query",
+    "mypy_boto3_marketplace_agreement",
+    "mypy_boto3_marketplace_catalog",
+    "mypy_boto3_marketplace_deployment",
+    "mypy_boto3_marketplace_discovery",
+    "mypy_boto3_marketplace_entitlement",
+    "mypy_boto3_marketplace_reporting",
+    "mypy_boto3_marketplacecommerceanalytics",
+    "mypy_boto3_mediaconnect",
+    "mypy_boto3_mediaconvert",
+    "mypy_boto3_medialive",
+    "mypy_boto3_mediapackage",
+    "mypy_boto3_mediapackage_vod",
+    "mypy_boto3_mediapackagev2",
+    "mypy_boto3_mediastore",
+    "mypy_boto3_mediastore_data",
+    "mypy_boto3_mediatailor",
+    "mypy_boto3_medical_imaging",
+    "mypy_boto3_memorydb",
+    "mypy_boto3_meteringmarketplace",
+    "mypy_boto3_mgh",
+    "mypy_boto3_mgn",
+    "mypy_boto3_migration_hub_refactor_spaces",
+    "mypy_boto3_migrationhub_config",
+    "mypy_boto3_migrationhuborchestrator",
+    "mypy_boto3_migrationhubstrategy",
+    "mypy_boto3_mpa",
+    "mypy_boto3_mq",
+    "mypy_boto3_mturk",
+    "mypy_boto3_mwaa",
+    "mypy_boto3_mwaa_serverless",
+    "mypy_boto3_neptune",
+    "mypy_boto3_neptune_graph",
+    "mypy_boto3_neptunedata",
+    "mypy_boto3_network_firewall",
+    "mypy_boto3_network_security_manager",
+    "mypy_boto3_networkflowmonitor",
+    "mypy_boto3_networkmanager",
+    "mypy_boto3_networkmonitor",
+    "mypy_boto3_notifications",
+    "mypy_boto3_notificationscontacts",
+    "mypy_boto3_nova_act",
+    "mypy_boto3_oam",
+    "mypy_boto3_observabilityadmin",
+    "mypy_boto3_odb",
+    "mypy_boto3_omics",
+    "mypy_boto3_opensearch",
+    "mypy_boto3_opensearchserverless",
+    "mypy_boto3_organizations",
+    "mypy_boto3_osis",
+    "mypy_boto3_outposts",
+    "mypy_boto3_partnercentral_account",
+    "mypy_boto3_partnercentral_benefits",
+    "mypy_boto3_partnercentral_channel",
+    "mypy_boto3_partnercentral_revenue_measurement",
+    "mypy_boto3_partnercentral_selling",
+    "mypy_boto3_payment_cryptography",
+    "mypy_boto3_payment_cryptography_data",
+    "mypy_boto3_pca_connector_ad",
+    "mypy_boto3_pca_connector_scep",
+    "mypy_boto3_pcs",
+    "mypy_boto3_personalize",
+    "mypy_boto3_personalize_events",
+    "mypy_boto3_personalize_runtime",
+    "mypy_boto3_pi",
+    "mypy_boto3_pinpoint",
+    "mypy_boto3_pinpoint_email",
+    "mypy_boto3_pinpoint_sms_voice",
+    "mypy_boto3_pinpoint_sms_voice_v2",
+    "mypy_boto3_pipes",
+    "mypy_boto3_polly",
+    "mypy_boto3_pricing",
+    "mypy_boto3_pricing_plan_manager",
+    "mypy_boto3_proton",
+    "mypy_boto3_qapps",
+    "mypy_boto3_qbusiness",
+    "mypy_boto3_qconnect",
+    "mypy_boto3_quicksight",
+    "mypy_boto3_ram",
+    "mypy_boto3_rbin",
+    "mypy_boto3_rds",
+    "mypy_boto3_rds_data",
+    "mypy_boto3_redshift",
+    "mypy_boto3_redshift_data",
+    "mypy_boto3_redshift_serverless",
+    "mypy_boto3_rekognition",
+    "mypy_boto3_repostspace",
+    "mypy_boto3_resiliencehub",
+    "mypy_boto3_resiliencehubv2",
+    "mypy_boto3_resource_explorer_2",
+    "mypy_boto3_resource_groups",
+    "mypy_boto3_resourcegroupstaggingapi",
+    "mypy_boto3_rolesanywhere",
+    "mypy_boto3_route53",
+    "mypy_boto3_route53_recovery_cluster",
+    "mypy_boto3_route53_recovery_control_config",
+    "mypy_boto3_route53_recovery_readiness",
+    "mypy_boto3_route53domains",
+    "mypy_boto3_route53globalresolver",
+    "mypy_boto3_route53profiles",
+    "mypy_boto3_route53resolver",
+    "mypy_boto3_rtbfabric",
+    "mypy_boto3_rum",
+    "mypy_boto3_s3",
+    "mypy_boto3_s3control",
+    "mypy_boto3_s3files",
+    "mypy_boto3_s3outposts",
+    "mypy_boto3_s3tables",
+    "mypy_boto3_s3vectors",
+    "mypy_boto3_sagemaker",
+    "mypy_boto3_sagemaker_a2i_runtime",
+    "mypy_boto3_sagemaker_edge",
+    "mypy_boto3_sagemaker_featurestore_runtime",
+    "mypy_boto3_sagemaker_geospatial",
+    "mypy_boto3_sagemaker_metrics",
+    "mypy_boto3_sagemaker_runtime",
+    "mypy_boto3_sagemakerjobruntime",
+    "mypy_boto3_sagemakertrainingsessionruntime",
+    "mypy_boto3_savingsplans",
+    "mypy_boto3_scheduler",
+    "mypy_boto3_schemas",
+    "mypy_boto3_sdb",
+    "mypy_boto3_secretsmanager",
+    "mypy_boto3_security_ir",
+    "mypy_boto3_securityagent",
+    "mypy_boto3_securityhub",
+    "mypy_boto3_securitylake",
+    "mypy_boto3_serverlessrepo",
+    "mypy_boto3_service_quotas",
+    "mypy_boto3_servicecatalog",
+    "mypy_boto3_servicecatalog_appregistry",
+    "mypy_boto3_servicediscovery",
+    "mypy_boto3_ses",
+    "mypy_boto3_sesv2",
+    "mypy_boto3_shield",
+    "mypy_boto3_signer",
+    "mypy_boto3_signer_data",
+    "mypy_boto3_signin",
+    "mypy_boto3_simpledbv2",
+    "mypy_boto3_snow_device_management",
+    "mypy_boto3_snowball",
+    "mypy_boto3_sns",
+    "mypy_boto3_socialmessaging",
+    "mypy_boto3_sqs",
+    "mypy_boto3_ssm",
+    "mypy_boto3_ssm_contacts",
+    "mypy_boto3_ssm_guiconnect",
+    "mypy_boto3_ssm_incidents",
+    "mypy_boto3_ssm_quicksetup",
+    "mypy_boto3_ssm_sap",
+    "mypy_boto3_sso",
+    "mypy_boto3_sso_admin",
+    "mypy_boto3_sso_oidc",
+    "mypy_boto3_stepfunctions",
+    "mypy_boto3_storagegateway",
+    "mypy_boto3_sts",
+    "mypy_boto3_supplychain",
+    "mypy_boto3_support",
+    "mypy_boto3_support_app",
+    "mypy_boto3_supportauthz",
+    "mypy_boto3_sustainability",
+    "mypy_boto3_swf",
+    "mypy_boto3_synthetics",
+    "mypy_boto3_taxsettings",
+    "mypy_boto3_textract",
+    "mypy_boto3_timestream_influxdb",
+    "mypy_boto3_timestream_query",
+    "mypy_boto3_timestream_write",
+    "mypy_boto3_tnb",
+    "mypy_boto3_transcribe",
+    "mypy_boto3_transfer",
+    "mypy_boto3_translate",
+    "mypy_boto3_trustedadvisor",
+    "mypy_boto3_uxc",
+    "mypy_boto3_verifiedpermissions",
+    "mypy_boto3_voice_id",
+    "mypy_boto3_vpc_lattice",
+    "mypy_boto3_waf",
+    "mypy_boto3_waf_regional",
+    "mypy_boto3_wafv2",
+    "mypy_boto3_wellarchitected",
+    "mypy_boto3_wickr",
+    "mypy_boto3_wisdom",
+    "mypy_boto3_workdocs",
+    "mypy_boto3_workmail",
+    "mypy_boto3_workmailmessageflow",
+    "mypy_boto3_workspaces",
+    "mypy_boto3_workspaces_instances",
+    "mypy_boto3_workspaces_thin_client",
+    "mypy_boto3_workspaces_web",
+    "mypy_boto3_xray",
+]
+boxsdk = ["box_sdk_gen"]
+brotlipy = ["brotli"]
+browser-harness = ["mcp_server"]
+bump-my-version = ["bumpversion"]
+bump2version = ["bumpversion"]
+cadquery-ocp = ["OCP"]
+cadquery-ocp-novtk = ["OCP"]
+camelot-py = ["camelot"]
+capi-param-builder-python = ["capi_param_builder"]
+cassandra-driver = ["cassandra"]
+cattrs = ["cattr"]
+cel-python = ["celpy"]
+celery-redbeat = ["redbeat"]
+cerebras-cloud-sdk = ["cerebras.cloud"]
+cfgrib = ["cf2cdm"]
+cfn-flip = ["cfn_clean", "cfn_tools"]
+cfn-lint = ["cfnlint"]
+chalk-viztracer = ["viztracer"]
+chdb = ["adbc_driver_chdb"]
+chdb-core = [
+    "chdb.dataframe",
+    "chdb.dbapi",
+    "chdb.progress_display",
+    "chdb.rwabc",
+    "chdb.session",
+    "chdb.sqltypes",
+    "chdb.state",
+    "chdb.udf",
+    "chdb.utils",
+]
+chroma-hnswlib = ["hnswlib"]
+chromadb = ["chromadb_rust_bindings"]
+chronos-forecasting = ["chronos"]
+cloud-sql-python-connector = ["google.cloud.sql.connector"]
+cmeel = ["cmeel_pth"]
+codemagic-cli-tools = ["codemagic"]
+codespell = ["codespell_lib"]
+conan = ["conans"]
+configcat-client = ["configcatclient"]
+configobj = ["validate"]
+configparser = ["backports.configparser"]
+connect-python = ["connectrpc"]
+construct-typing = ["construct_typed"]
+coolprop = ["CoolProp"]
+crcmod-plus = ["crcmod"]
+crowdstrike-falconpy = ["falconpy"]
+cssbeautifier = ["jsbeautifier"]
+ct3 = ["Cheetah"]
+cuda-tile = ["cutile_cache"]
+cupy-cuda12x = ["cupy", "cupy_backends", "cupyx"]
+cx-oracle = ["cx_Oracle"]
+cyclonedx-bom = ["cyclonedx_py"]
+cyclonedx-python-lib = ["cyclonedx"]
+cython = ["Cython", "pyximport"]
+daphne = ["twisted.plugins.fd_endpoint"]
+darabonba-core = ["darabonba"]
+data-designer-config = [
+    "data_designer.config",
+    "data_designer.errors",
+    "data_designer.lazy_heavy_imports",
+    "data_designer.logging",
+    "data_designer.plugin_manager",
+    "data_designer.plugins",
+]
+data-designer-engine = ["data_designer.engine"]
+databricks-agents = [
+    "databricks.migrations",
+    "databricks.rag_eval",
+    "databricks.version",
+]
+databricks-ai-search = ["databricks.ai_search"]
+databricks-connect = [
+    "databricks.failure_pb2",
+    "databricks.secrets",
+    "databricks.service_credentials",
+    "delta",
+    "pyspark",
+]
+databricks-dlt = ["dlt"]
+databricks-feature-engineering = [
+    "databricks.feature_engineering",
+    "databricks.feature_store",
+    "databricks.ml_features",
+    "databricks.ml_features_common",
+]
+databricks-sql-connector = ["databricks.sql"]
+databricks-vectorsearch = ["databricks.vector_search"]
+dataclasses-json-speakeasy = ["dataclasses_json"]
+datacontract-cli = ["datacontract"]
+datadog-checks-base = ["datadog_checks"]
+dateparser = ["dateparser_cli", "dateparser_data", "dateparser_scripts"]
+datetime = ["DateTime"]
+dbl-tempo = ["tempo"]
+dbt-adapters = ["dbt.include.global_project"]
+dbt-athena = ["dbt.include.athena"]
+dbt-bigquery = ["dbt.include.bigquery"]
+dbt-clickhouse = ["dbt.include.clickhouse"]
+dbt-core = ["dbt"]
+dbt-databricks = ["dbt.include.databricks"]
+dbt-duckdb = ["dbt.include.duckdb"]
+dbt-postgres = ["dbt.include.postgres"]
+dbt-protos = ["dbtlabs"]
+dbt-redshift = ["dbt.include.redshift"]
+dbt-semantic-interfaces = ["dsi_pydantic_shim"]
+dbt-snowflake = ["dbt.include.snowflake"]
+dbt-spark = ["dbt.include.spark"]
+ddapm-test-agent = ["lapdog"]
+deepgram-sdk = ["deepgram"]
+delta-spark = ["delta"]
+descript-audio-codec = ["dac"]
+descript-audiotools = ["audiotools"]
+discord-py = ["discord"]
+django-admin-list-filter-dropdown = ["django_admin_listfilter_dropdown"]
+django-admin-rangefilter = ["rangefilter"]
+django-admin-sortable2 = ["adminsortable2"]
+django-adminplus = ["adminplus"]
+django-allauth = ["allauth"]
+django-allow-cidr = ["allow_cidr"]
+django-anymail = ["anymail"]
+django-appconf = ["appconf"]
+django-auditlog = ["auditlog"]
+django-autocomplete-light = [
+    "dal",
+    "dal_alight",
+    "dal_alight_queryset_sequence",
+    "dal_contenttypes",
+    "dal_queryset_sequence",
+    "dal_select2",
+    "dal_select2_queryset_sequence",
+    "dal_select2_taggit",
+]
+django-axes = ["axes"]
+django-cacheops = ["cacheops"]
+django-ckeditor = ["ckeditor", "ckeditor_demo", "ckeditor_uploader"]
+django-colorfield = ["colorfield"]
+django-compressor = ["compressor"]
+django-constance = ["constance"]
+django-cors-headers = ["corsheaders"]
+django-crispy-forms = ["crispy_forms"]
+django-csp = ["csp"]
+django-debug-toolbar = ["debug_toolbar"]
+django-dirtyfields = ["dirtyfields"]
+django-environ = ["environ"]
+django-fernet-fields-v2 = ["fernet_fields"]
+django-filter = ["django_filters"]
+django-formtools = ["formtools"]
+django-guardian = ["guardian"]
+django-health-check = ["health_check"]
+django-hijack = ["hijack"]
+django-import-export = ["import_export"]
+django-ipware = ["ipware"]
+django-js-asset = ["js_asset"]
+django-localflavor = ["localflavor"]
+django-log-request-id = ["log_request_id"]
+django-loginas = ["loginas"]
+django-model-utils = ["model_utils"]
+django-modeltranslation = ["modeltranslation"]
+django-money = ["djmoney"]
+django-mptt = ["mptt"]
+django-multiselectfield = ["multiselectfield"]
+django-nested-admin = ["nested_admin"]
+django-ninja = ["ninja"]
+django-oauth-toolkit = ["oauth2_provider"]
+django-pgactivity = ["pgactivity"]
+django-pghistory = ["pghistory"]
+django-pglock = ["pglock"]
+django-pgmigrate = ["pgmigrate"]
+django-pgtrigger = ["pgtrigger"]
+django-phonenumber-field = ["phonenumber_field"]
+django-picklefield = ["picklefield"]
+django-polymorphic = ["polymorphic"]
+django-postgres-copy = ["postgres_copy"]
+django-rest-knox = ["knox"]
+django-rest-polymorphic = ["rest_polymorphic"]
+django-reversion = ["reversion"]
+django-safedelete = ["safedelete"]
+django-scim2 = ["django_scim"]
+django-silk = ["silk"]
+django-simple-history = ["simple_history"]
+django-storages = ["storages"]
+django-stubs = ["mypy_django_plugin"]
+django-taggit = ["sample_taggit", "taggit"]
+django-timezone-field = ["timezone_field"]
+django-treebeard = ["treebeard"]
+django-two-factor-auth = ["two_factor"]
+django-unfold = ["unfold"]
+django-waffle = ["waffle"]
+django-webpack-loader = ["webpack_loader"]
+django-widget-tweaks = ["widget_tweaks"]
+djangorestframework = ["rest_framework"]
+djangorestframework-api-key = ["rest_framework_api_key"]
+djangorestframework-csv = ["rest_framework_csv"]
+djangorestframework-dataclasses = ["rest_framework_dataclasses"]
+djangorestframework-role-filters = ["rest_framework_role_filters"]
+djangorestframework-simplejwt = ["rest_framework_simplejwt"]
+djangorestframework-stubs = ["mypy_drf_plugin"]
+dm-tree = ["tree"]
+dnspython = ["dns"]
+docker-compose = ["compose"]
+docker-image-py = ["docker_image"]
+docker-py = ["docker"]
+docker-pycreds = ["dockerpycreds"]
+docling-slim = ["docling"]
+docopt-ng = ["docopt"]
+docstring-parser-fork = ["docstring_parser"]
+dogpile-cache = ["dogpile"]
+dohq-artifactory = ["artifactory"]
+dracopy = ["DracoPy"]
+drf-exceptions-hog = ["exceptions_hog"]
+drf-extensions = ["rest_framework_extensions"]
+drf-nested-routers = ["rest_framework_nested"]
+duckdb = ["adbc_driver_duckdb"]
+eccodes = ["gribapi"]
+edgartools = ["edgar"]
+edge-tts = ["edge_playback"]
+edgegrid-python = ["akamai.edgegrid"]
+elastic-apm = ["elasticapm"]
+elasticsearch-dbapi = ["es"]
+elementary-data = ["elementary"]
+esp-idf-kconfig = [
+    "esp_kconfiglib",
+    "esp_menuconfig",
+    "kcompare",
+    "kconfcheck",
+    "kconfgen",
+    "kconfiglib",
+    "kconfserver",
+    "menuconfig",
+]
+evergreen-py = ["evergreen"]
+factory-boy = ["factory"]
+faiss-cpu = ["faiss"]
+faiss-gpu = ["faiss"]
+fastapi-cache2 = ["fastapi_cache"]
+fastmcp-slim = ["fastmcp"]
+fasttext = ["fasttext_pybind"]
+fasttext-numpy2 = ["fasttext", "fasttext_pybind"]
+fasttext-predict = ["fasttext", "fasttext_pybind"]
+fasttext-wheel = ["fasttext", "fasttext_pybind"]
+ffmpeg-python = ["ffmpeg"]
+fhir-resources = ["fhir"]
+firecrawl-anydoc = ["anydoc"]
+firecrawl-py = ["firecrawl"]
+fireworks-ai = ["fireworks"]
+fla-core = ["fla"]
+flagsmith-flag-engine = ["flag_engine"]
+flake8-bugbear = ["bugbear"]
+flake8-pyproject = ["flake8p"]
+flash-attn-4 = ["flash_attn.cute"]
+flash-linear-attention = ["fla.layers", "fla.models"]
+flashinfer-python = ["flashinfer"]
+flax = ["flaxlib_src.src.flaxlib"]
+fno = ["fno_routing_sample"]
+fonttools = ["fontTools"]
+foundry-platform-sdk = ["foundry_sdk"]
+fpdf2 = ["fpdf"]
+freetype-py = ["freetype"]
+fugue = [
+    "fugue_contrib",
+    "fugue_dask",
+    "fugue_duckdb",
+    "fugue_ibis",
+    "fugue_notebook",
+    "fugue_polars",
+    "fugue_ray",
+    "fugue_spark",
+    "fugue_sql",
+    "fugue_test",
+]
+functions-framework = [
+    "google.cloud.functions",
+    "google.cloud.functions_v1",
+    "google.cloud.functions_v1beta2",
+]
+future = ["libfuturize", "libpasteurize", "past"]
+gherkin-official = ["gherkin"]
+github-copilot-sdk = ["copilot"]
+github3-py = ["github3"]
+gitlint-core = ["gitlint"]
+gitpython = ["git"]
+google = ["googlesearch"]
+google-ai-generativelanguage = [
+    "google.ai.generativelanguage_v1",
+    "google.ai.generativelanguage_v1alpha",
+    "google.ai.generativelanguage_v1beta",
+    "google.ai.generativelanguage_v1beta2",
+    "google.ai.generativelanguage_v1beta3",
+]
+google-analytics-admin = [
+    "google.analytics.admin_v1alpha",
+    "google.analytics.admin_v1beta",
+]
+google-analytics-data = [
+    "google.analytics.data_v1alpha",
+    "google.analytics.data_v1beta",
+]
+google-api = ["google.base", "google.drive", "google.token", "google.user"]
+google-api-core = ["google.api_core"]
+google-api-python-client = ["apiclient", "googleapiclient"]
+google-apitools = ["apitools"]
+google-auth = ["google.oauth2"]
+google-cloud-access-context-manager = [
+    "google.identity.accesscontextmanager.type",
+    "google.identity.accesscontextmanager.v1",
+]
+google-cloud-aiplatform = [
+    "agentplatform",
+    "google.cloud.aiplatform_v1",
+    "google.cloud.aiplatform_v1beta1",
+    "vertex_ray",
+    "vertexai",
+]
+google-cloud-alloydb = [
+    "google.cloud.alloydb_v1",
+    "google.cloud.alloydb_v1alpha",
+    "google.cloud.alloydb_v1beta",
+]
+google-cloud-alloydb-connector = [
+    "google.api.field_behavior_pb2",
+    "google.cloud.alloydb_connectors_v1.proto",
+    "google.cloud.alloydbconnector",
+]
+google-cloud-appengine-logging = [
+    "google.cloud.appengine_logging",
+    "google.cloud.appengine_logging_v1",
+]
+google-cloud-artifact-registry = [
+    "google.cloud.artifactregistry",
+    "google.cloud.artifactregistry_v1",
+    "google.cloud.artifactregistry_v1beta2",
+]
+google-cloud-asset = [
+    "google.cloud.asset_v1",
+    "google.cloud.asset_v1p1beta1",
+    "google.cloud.asset_v1p2beta1",
+    "google.cloud.asset_v1p5beta1",
+]
+google-cloud-audit-log = ["google.cloud.audit"]
+google-cloud-automl = ["google.cloud.automl_v1", "google.cloud.automl_v1beta1"]
+google-cloud-batch = ["google.cloud.batch_v1", "google.cloud.batch_v1alpha"]
+google-cloud-bigquery = ["google.cloud.bigquery_v2"]
+google-cloud-bigquery-biglake = [
+    "google.cloud.bigquery_biglake",
+    "google.cloud.bigquery_biglake_v1",
+    "google.cloud.bigquery_biglake_v1alpha1",
+]
+google-cloud-bigquery-datatransfer = [
+    "google.cloud.bigquery_datatransfer",
+    "google.cloud.bigquery_datatransfer_v1",
+]
+google-cloud-bigquery-storage = [
+    "google.cloud.bigquery_storage",
+    "google.cloud.bigquery_storage_v1",
+    "google.cloud.bigquery_storage_v1alpha",
+    "google.cloud.bigquery_storage_v1beta",
+    "google.cloud.bigquery_storage_v1beta2",
+]
+google-cloud-bigtable = [
+    "google.cloud.bigtable_admin",
+    "google.cloud.bigtable_admin_v2",
+    "google.cloud.bigtable_v2",
+]
+google-cloud-build = ["google.cloud.devtools"]
+google-cloud-compute = ["google.cloud.compute_v1"]
+google-cloud-container = [
+    "google.cloud.container_v1",
+    "google.cloud.container_v1beta1",
+]
+google-cloud-core = [
+    "google.cloud.client",
+    "google.cloud.environment_vars",
+    "google.cloud.exceptions",
+    "google.cloud.obsolete",
+    "google.cloud.operation",
+    "google.cloud.version",
+]
+google-cloud-datacatalog = [
+    "google.cloud.datacatalog_v1",
+    "google.cloud.datacatalog_v1beta1",
+]
+google-cloud-dataflow-client = [
+    "google.cloud.dataflow",
+    "google.cloud.dataflow_v1beta3",
+]
+google-cloud-dataform = [
+    "google.cloud.dataform_v1",
+    "google.cloud.dataform_v1beta1",
+]
+google-cloud-dataplex = ["google.cloud.dataplex_v1"]
+google-cloud-dataproc = ["google.cloud.dataproc_v1"]
+google-cloud-dataproc-metastore = [
+    "google.cloud.metastore",
+    "google.cloud.metastore_v1",
+    "google.cloud.metastore_v1alpha",
+    "google.cloud.metastore_v1beta",
+]
+google-cloud-datastore = [
+    "google.cloud.datastore_admin",
+    "google.cloud.datastore_admin_v1",
+    "google.cloud.datastore_v1",
+]
+google-cloud-dialogflow-cx = [
+    "google.cloud.dialogflowcx",
+    "google.cloud.dialogflowcx_v3",
+    "google.cloud.dialogflowcx_v3beta1",
+]
+google-cloud-discoveryengine = [
+    "google.cloud.discoveryengine_v1",
+    "google.cloud.discoveryengine_v1alpha",
+    "google.cloud.discoveryengine_v1beta",
+]
+google-cloud-dlp = ["google.cloud.dlp_v2"]
+google-cloud-documentai = [
+    "google.cloud.documentai_v1",
+    "google.cloud.documentai_v1beta3",
+]
+google-cloud-error-reporting = [
+    "google.cloud.error_reporting",
+    "google.cloud.errorreporting",
+    "google.cloud.errorreporting_v1beta1",
+]
+google-cloud-firestore = [
+    "google.cloud.firestore_admin",
+    "google.cloud.firestore_admin_v1",
+    "google.cloud.firestore_bundle",
+    "google.cloud.firestore_v1",
+]
+google-cloud-iam = [
+    "google.cloud.iam_admin",
+    "google.cloud.iam_admin_v1",
+    "google.cloud.iam_credentials",
+    "google.cloud.iam_credentials_v1",
+    "google.cloud.iam_v2",
+    "google.cloud.iam_v2beta",
+    "google.cloud.iam_v3",
+    "google.cloud.iam_v3beta",
+]
+google-cloud-iamconnectorcredentials = [
+    "google.cloud.iamconnectorcredentials_v1alpha",
+]
+google-cloud-jupyter-config = ["google.cloud.jupyter_config"]
+google-cloud-kms = ["google.cloud.kms_v1"]
+google-cloud-language = [
+    "google.cloud.language_v1",
+    "google.cloud.language_v1beta2",
+    "google.cloud.language_v2",
+]
+google-cloud-logging = ["google.cloud.logging_v2"]
+google-cloud-managedkafka = ["google.cloud.managedkafka_v1"]
+google-cloud-memcache = [
+    "google.cloud.memcache_v1",
+    "google.cloud.memcache_v1beta2",
+]
+google-cloud-modelarmor = [
+    "google.cloud.modelarmor_v1",
+    "google.cloud.modelarmor_v1beta",
+]
+google-cloud-monitoring = ["google.cloud.monitoring_v3"]
+google-cloud-org-policy = [
+    "google.cloud.orgpolicy",
+    "google.cloud.orgpolicy_v2",
+]
+google-cloud-os-config = [
+    "google.cloud.osconfig",
+    "google.cloud.osconfig_v1",
+    "google.cloud.osconfig_v1alpha",
+]
+google-cloud-os-login = ["google.cloud.oslogin", "google.cloud.oslogin_v1"]
+google-cloud-parametermanager = ["google.cloud.parametermanager_v1"]
+google-cloud-pubsub = [
+    "google.cloud.pubsub_v1",
+    "google.pubsub",
+    "google.pubsub_v1",
+]
+google-cloud-pubsublite = ["google.cloud.pubsublite_v1"]
+google-cloud-recaptcha-enterprise = [
+    "google.cloud.recaptchaenterprise",
+    "google.cloud.recaptchaenterprise_v1",
+]
+google-cloud-recommendations-ai = [
+    "google.cloud.recommendationengine",
+    "google.cloud.recommendationengine_v1beta1",
+]
+google-cloud-redis = ["google.cloud.redis_v1", "google.cloud.redis_v1beta1"]
+google-cloud-resource-manager = [
+    "google.cloud.resourcemanager",
+    "google.cloud.resourcemanager_v3",
+]
+google-cloud-run = ["google.cloud.run_v2"]
+google-cloud-scheduler = [
+    "google.cloud.scheduler_v1",
+    "google.cloud.scheduler_v1beta1",
+]
+google-cloud-secret-manager = [
+    "google.cloud.secretmanager",
+    "google.cloud.secretmanager_v1",
+    "google.cloud.secretmanager_v1beta1",
+    "google.cloud.secretmanager_v1beta2",
+]
+google-cloud-spanner = [
+    "google.cloud.spanner_admin_database",
+    "google.cloud.spanner_admin_database_v1",
+    "google.cloud.spanner_admin_instance",
+    "google.cloud.spanner_admin_instance_v1",
+    "google.cloud.spanner_dbapi",
+    "google.cloud.spanner_v1",
+]
+google-cloud-speech = [
+    "google.cloud.speech_v1",
+    "google.cloud.speech_v1p1beta1",
+    "google.cloud.speech_v2",
+]
+google-cloud-storage-control = [
+    "google.cloud.storage_control",
+    "google.cloud.storage_control_v2",
+]
+google-cloud-storage-transfer = [
+    "google.cloud.storage_transfer",
+    "google.cloud.storage_transfer_v1",
+]
+google-cloud-tasks = [
+    "google.cloud.tasks_v2",
+    "google.cloud.tasks_v2beta2",
+    "google.cloud.tasks_v2beta3",
+]
+google-cloud-texttospeech = [
+    "google.cloud.texttospeech_v1",
+    "google.cloud.texttospeech_v1beta1",
+]
+google-cloud-trace = ["google.cloud.trace_v1", "google.cloud.trace_v2"]
+google-cloud-translate = [
+    "google.cloud.translate_v2",
+    "google.cloud.translate_v3",
+    "google.cloud.translate_v3beta1",
+]
+google-cloud-vectorsearch = [
+    "google.cloud.vectorsearch_v1",
+    "google.cloud.vectorsearch_v1beta",
+]
+google-cloud-video-transcoder = ["google.cloud.video.transcoder_v1"]
+google-cloud-videointelligence = [
+    "google.cloud.videointelligence_v1",
+    "google.cloud.videointelligence_v1beta2",
+    "google.cloud.videointelligence_v1p1beta1",
+    "google.cloud.videointelligence_v1p2beta1",
+    "google.cloud.videointelligence_v1p3beta1",
+]
+google-cloud-vision = [
+    "google.cloud.vision_helpers",
+    "google.cloud.vision_v1",
+    "google.cloud.vision_v1p1beta1",
+    "google.cloud.vision_v1p2beta1",
+    "google.cloud.vision_v1p3beta1",
+    "google.cloud.vision_v1p4beta1",
+]
+google-cloud-workflows = [
+    "google.cloud.workflows_v1",
+    "google.cloud.workflows_v1beta",
+]
+google-pasta = ["pasta"]
+google-python-cloud-debugger = ["googleclouddebugger"]
+google-re2 = ["re2"]
+google-resumable-media = ["google.resumable_media"]
+googleapis-common-protos = [
+    "google.api",
+    "google.cloud.common_resources_pb2",
+    "google.cloud.extended_operations_pb2",
+    "google.cloud.location.locations_pb2",
+    "google.gapic.metadata.gapic_metadata_pb2",
+    "google.logging.type.http_request_pb2",
+    "google.logging.type.log_severity_pb2",
+    "google.longrunning.operations_grpc",
+    "google.longrunning.operations_grpc_pb2",
+    "google.longrunning.operations_pb2",
+    "google.longrunning.operations_pb2_grpc",
+    "google.longrunning.operations_proto",
+    "google.longrunning.operations_proto_pb2",
+    "google.rpc.code_pb2",
+    "google.rpc.context.attribute_context_pb2",
+    "google.rpc.context.audit_context_pb2",
+    "google.rpc.error_details_pb2",
+    "google.rpc.http_pb2",
+    "google.rpc.status_pb2",
+    "google.type.calendar_period_pb2",
+    "google.type.color_pb2",
+    "google.type.date_pb2",
+    "google.type.datetime_pb2",
+    "google.type.dayofweek_pb2",
+    "google.type.decimal_pb2",
+    "google.type.expr_pb2",
+    "google.type.fraction_pb2",
+    "google.type.interval_pb2",
+    "google.type.latlng_pb2",
+    "google.type.localized_text_pb2",
+    "google.type.money_pb2",
+    "google.type.month_pb2",
+    "google.type.phone_number_pb2",
+    "google.type.postal_address_pb2",
+    "google.type.quaternion_pb2",
+    "google.type.timeofday_pb2",
+]
+googlesearch-python = ["googlesearch"]
+graphemeu = ["grapheme"]
+graphframes-py = ["graphframes"]
+graphifyy = ["graphify"]
+graphql-core = ["graphql"]
+gremlinpython = ["gremlin_python"]
+griffelib = ["griffe"]
+grpc-google-iam-v1 = ["google.iam.v1"]
+grpcio = ["grpc"]
+grpcio-gcp = ["grpc_gcp"]
+grpcio-health-checking = ["grpc_health"]
+grpcio-reflection = ["grpc_reflection"]
+grpcio-status = ["grpc_status"]
+grpcio-tools = ["grpc_tools"]
+gtfs-realtime-bindings = ["google.transit"]
+guppy3 = ["guppy"]
+harbor-rewardkit = ["rewardkit"]
+hdbcli = ["pyhdbcli"]
+hexbytes = ["newsfragments.validate_files"]
+hidapi = ["hid"]
+hindsight-client = ["hindsight_client_api"]
+html-for-docx = ["html4docx"]
+htmlmin2 = ["htmlmin"]
+hubspot-api-client = ["hubspot"]
+humming-kernels = ["humming"]
+hydra-colorlog = ["colorlog"]
+hydra-core = ["hydra"]
+ibis-framework = ["ibis"]
+ibm-db = ["clidriver", "ibm_db_ctx", "ibm_db_dbi"]
+idf-component-manager = ["idf_component_tools"]
+imbalanced-learn = ["imblearn"]
+import-linter = ["importlinter"]
+impyla = ["impala", "impala_thrift_gen"]
+infisicalsdk = ["infisical_sdk"]
+influxdb3-python = ["influxdb_client_3"]
+inquirerpy = ["InquirerPy"]
+insightface = ["insightface_privateframe_bootstrap"]
+inspect-evals = ["register_tooling"]
+interpret-core = ["interpret"]
+intuit-oauth = [
+    "intuitlib.client",
+    "intuitlib.config",
+    "intuitlib.enums",
+    "intuitlib.exceptions",
+    "intuitlib.migration",
+    "intuitlib.utils",
+    "intuitlib.version",
+]
+ipy = ["IPy"]
+ipykernel = ["ipykernel_launcher"]
+ipython = ["IPython"]
+itables = ["itables_for_dash"]
+iterable-io = ["iterableio"]
+jaro-winkler = ["jaro"]
+jinja2-cli = ["jinja2cli"]
+jpype1 = ["jpype"]
+json-e = ["jsone"]
+json-rpc = ["jsonrpc"]
+jsonata-python = ["jsonata"]
+jsonpatch = ["jsonpatch_cli"]
+jsonpath-python = ["jsonpath"]
+jsonref = ["proxytypes"]
+junit2html = ["junit2htmlreport"]
+jupyter = ["IPython"]
+jupyter-core = ["jupyter"]
+jupytext = ["jupyterlab_jupytext", "jupytext_config"]
+kafka-python = ["kafka"]
+kafka-python-ng = ["kafka"]
+kconfiglib = [
+    "alldefconfig",
+    "allmodconfig",
+    "allnoconfig",
+    "allyesconfig",
+    "defconfig",
+    "genconfig",
+    "guiconfig",
+    "listnewconfig",
+    "menuconfig",
+    "oldconfig",
+    "olddefconfig",
+    "savedefconfig",
+    "setconfig",
+]
+kedro-datasets = ["kedro_datasets_benchmarks", "kedro_datasets_experimental"]
+keyrings-google-artifactregistry-auth = [
+    "google_artifactregistry_auth",
+    "keyrings.gauth",
+]
+kfp-pipeline-spec = ["kfp.pipeline_spec"]
+klayout = ["pya"]
+langgraph-api = [
+    "langgraph_grpc_common",
+    "langgraph_license",
+    "langgraph_runtime",
+]
+langgraph-checkpoint = [
+    "langgraph.cache.base",
+    "langgraph.cache.memory",
+    "langgraph.cache.redis",
+    "langgraph.store.base",
+    "langgraph.store.memory",
+]
+langgraph-checkpoint-postgres = ["langgraph.store.postgres"]
+langgraph-checkpoint-redis = ["langgraph.middleware", "langgraph.store.redis"]
+langgraph-checkpoint-sqlite = [
+    "langgraph.cache.sqlite",
+    "langgraph.store.sqlite",
+]
+lark-parser = ["lark"]
+launchdarkly-eventsource = ["ld_eventsource"]
+launchdarkly-server-sdk = ["ldclient"]
+legacy-cgi = ["cgi", "cgitb"]
+levenshtein = ["Levenshtein"]
+libclang = ["clang"]
+libpass = ["passlib"]
+libsass = ["pysassc", "sass", "sassutils"]
+line-bot-sdk = ["linebot"]
+line-profiler = ["kernprof"]
+lingua-language-detector = ["lingua"]
+linkedin-api-client = ["linkedin_api"]
+linkify-it-py = ["linkify_it"]
+linq-python = ["linq"]
+livekit-local-inference = ["livekit.local_inference"]
+livekit-plugins-noise-cancellation = ["livekit.plugins.noise_cancellation"]
+livekit-plugins-turn-detector = ["livekit.plugins.turn_detector"]
+lizard = ["lizard_ext", "lizard_languages"]
+llama-index-agent-openai = ["llama_index.agent.openai"]
+llama-index-cli = ["llama_index.cli"]
+llama-index-core = ["llama_index.core"]
+llama-index-embeddings-bedrock = ["llama_index.embeddings.bedrock"]
+llama-index-embeddings-openai = ["llama_index.embeddings.openai"]
+llama-index-indices-managed-llama-cloud = [
+    "llama_index.indices.managed.llama_cloud",
+]
+llama-index-legacy = ["llama_index.legacy"]
+llama-index-llms-openai = ["llama_index.llms.openai"]
+llama-index-multi-modal-llms-openai = ["llama_index.multi_modal_llms.openai"]
+llama-index-program-openai = ["llama_index.program.openai"]
+llama-index-question-gen-openai = ["llama_index.question_gen.openai"]
+llama-index-readers-file = ["llama_index.readers.file"]
+llama-index-readers-llama-parse = ["llama_index.readers.llama_parse"]
+llama-index-workflows = ["llama_agents.workflows", "workflows"]
+lm-format-enforcer = ["lmformatenforcer"]
+locust = ["pytest_locust.plugin"]
+logical-unification = ["unification"]
+logzio-python-handler = ["logzio"]
+loongsuite-util-genai = ["opentelemetry.util.genai"]
+lru-dict = ["lru"]
+magic-wormhole = ["wormhole"]
+mail-parser = ["mailparser"]
+markdown-it-py = ["markdown_it"]
+markdown-to-confluence = ["md2conf"]
+matplotlib = [
+    "mpl_toolkits.axes_grid1",
+    "mpl_toolkits.axisartist",
+    "mpl_toolkits.mplot3d",
+    "pylab",
+]
+matrix-nio = ["nio"]
+mcap-protobuf-support = ["mcap_protobuf"]
+mcp-for-blender = ["blender_mcp"]
+mecab-python3 = ["MeCab"]
+mem0ai = ["mem0"]
+memory-profiler = ["mprof"]
+mergepythonclient = ["merge"]
+meson = ["mesonbuild"]
+meson-python = ["mesonpy"]
+metricflow = [
+    "metricflow_semantic_interfaces",
+    "metricflow_semantics",
+    "msi_pydantic_shim",
+]
+metronome-sdk = ["metronome"]
+mgrs = ["libmgrs"]
+microsoft-agents-activity = ["microsoft_agents.activity"]
+microsoft-agents-authentication-msal = ["microsoft_agents.authentication.msal"]
+microsoft-agents-hosting-core = ["microsoft_agents.hosting.core"]
+microsoft-kiota-abstractions = ["kiota_abstractions"]
+microsoft-kiota-authentication-azure = ["kiota_authentication_azure"]
+microsoft-kiota-http = ["kiota_http"]
+microsoft-kiota-serialization-form = ["kiota_serialization_form"]
+microsoft-kiota-serialization-json = ["kiota_serialization_json"]
+microsoft-kiota-serialization-multipart = ["kiota_serialization_multipart"]
+microsoft-kiota-serialization-text = ["kiota_serialization_text"]
+mini-racer = ["py_mini_racer"]
+mini-swe-agent = ["minisweagent"]
+minikanren = ["kanren"]
+mistral-vibe = ["mistralai_vibe_local_harness", "vibe"]
+mkdocs-macros-plugin = ["mkdocs_macros"]
+mkdocs-material = ["material"]
+mkdocs-material-extensions = ["materialx"]
+mkdocs-mermaid2-plugin = ["mermaid2"]
+mkdocstrings-python = ["mkdocstrings_handlers"]
+mlflow-skinny = ["mlflow"]
+mlflow-tracing = ["mlflow"]
+mlx-metal = ["mlx.include.metal_cpp.SingleHeader.MakeSingleHeader"]
+modal = ["modal_docs", "modal_proto", "modal_version"]
+model-library = ["model_gateway"]
+mosaicml-streaming = ["streaming"]
+msgraph-sdk = ["msgraph"]
+msoffcrypto-tool = ["msoffcrypto"]
+mypy = ["mypyc"]
+mysql-connector-python = ["mysql"]
+mysqlclient = ["MySQLdb"]
+naked = ["Naked"]
+nats-py = ["nats"]
+nccl4py = ["nccl.bindings", "nccl.core"]
+ndg-httpsclient = ["ndg"]
+netcdf4 = ["netCDF4"]
+nexus-rpc = ["nexusrpc"]
+node-semver = ["nodesemver"]
+nodejs-wheel-binaries = ["nodejs_wheel"]
+numpy-quaternion = ["quaternion"]
+nvidia-cublas-cu11 = ["nvidia.cublas"]
+nvidia-cuda-cupti-cu11 = ["nvidia.cuda_cupti"]
+nvidia-cuda-nvrtc-cu11 = ["nvidia.cuda_nvrtc"]
+nvidia-cuda-runtime-cu11 = ["nvidia.cuda_runtime"]
+nvidia-cudnn-frontend = ["cudnn"]
+nvidia-cufft-cu11 = ["nvidia.cufft"]
+nvidia-curand-cu11 = ["nvidia.curand"]
+nvidia-curand-cu12 = ["nvidia.curand"]
+nvidia-cusolver-cu11 = ["nvidia.cusolver"]
+nvidia-cusparse-cu11 = ["nvidia.cusparse"]
+nvidia-cutlass-dsl-libs-core = ["nvidia_cutlass_dsl.dsl_packages.cutlass"]
+nvidia-ml-py = ["pynvml"]
+nvidia-nccl-cu11 = ["nvidia.nccl"]
+nvidia-nvtx-cu11 = ["nvidia.nvtx"]
+nvshmem4py-cu13 = ["nvshmem"]
+o365 = ["O365"]
+oai-statsig-python-core = ["statsig_python_core"]
+office365-rest-python-client = ["office365"]
+olefile = ["OleFileIO_PL"]
+onepassword-sdk = ["onepassword"]
+onfido-python = ["onfido"]
+onnxruntime-gpu = ["onnxruntime"]
+open-clip-torch = ["open_clip", "open_clip_train"]
+openai-agents = ["agents"]
+openai-codex-cli-bin = ["codex_cli_bin"]
+opencc-python-reimplemented = ["opencc"]
+opencensus-context = ["opencensus.common"]
+opencensus-ext-azure = ["opencensus.ext"]
+opencv-contrib-python = ["cv2"]
+opencv-contrib-python-headless = ["cv2"]
+opencv-python = ["cv2"]
+opencv-python-headless = ["cv2"]
+openexr = ["Imath", "OpenEXR"]
+openfeature-sdk = [
+    "openfeature.api",
+    "openfeature.client",
+    "openfeature.evaluation_context",
+    "openfeature.event",
+    "openfeature.exception",
+    "openfeature.flag_evaluation",
+    "openfeature.hook",
+    "openfeature.immutable_dict",
+    "openfeature.provider",
+    "openfeature.telemetry",
+    "openfeature.track",
+    "openfeature.transaction_context",
+    "openfeature.version",
+]
+openhands-agent-server = ["openhands.agent_server"]
+openinference-instrumentation-claude-agent-sdk = [
+    "openinference.instrumentation.claude_agent_sdk",
+]
+openinference-instrumentation-google-genai = [
+    "openinference.instrumentation.google_genai",
+]
+openinference-instrumentation-openai-agents = [
+    "openinference.instrumentation.openai_agents",
+]
+openinference-semantic-conventions = ["openinference.semconv"]
+openlineage-integration-common = ["openlineage.common"]
+openlineage-python = ["openlineage.client"]
+opensearch-protobufs = ["opensearch"]
+opensearch-py = ["opensearchpy"]
+openstacksdk = ["openstack"]
+opentelemetry-api = [
+    "opentelemetry.attributes",
+    "opentelemetry.baggage",
+    "opentelemetry.context",
+    "opentelemetry.environment_variables",
+    "opentelemetry.metrics",
+    "opentelemetry.propagate",
+    "opentelemetry.propagators.composite",
+    "opentelemetry.propagators.textmap",
+    "opentelemetry.trace",
+    "opentelemetry.util.re",
+    "opentelemetry.util.types",
+    "opentelemetry.version",
+]
+opentelemetry-exporter-gcp-logging = ["opentelemetry.exporter.cloud_logging"]
+opentelemetry-exporter-gcp-monitoring = [
+    "opentelemetry.exporter.cloud_monitoring",
+]
+opentelemetry-exporter-gcp-trace = ["opentelemetry.exporter.cloud_trace"]
+opentelemetry-instrumentation-aio-pika = [
+    "opentelemetry.instrumentation.aio_pika",
+]
+opentelemetry-instrumentation-aiohttp-client = [
+    "opentelemetry.instrumentation.aiohttp_client",
+]
+opentelemetry-instrumentation-aiohttp-server = [
+    "opentelemetry.instrumentation.aiohttp_server",
+]
+opentelemetry-instrumentation-aws-lambda = [
+    "opentelemetry.instrumentation.aws_lambda",
+]
+opentelemetry-instrumentation-confluent-kafka = [
+    "opentelemetry.instrumentation.confluent_kafka",
+]
+opentelemetry-instrumentation-google-genai = [
+    "opentelemetry.instrumentation.google_genai",
+]
+opentelemetry-instrumentation-google-generativeai = [
+    "opentelemetry.instrumentation.google_generativeai",
+]
+opentelemetry-instrumentation-kafka-python = [
+    "opentelemetry.instrumentation.kafka",
+]
+opentelemetry-instrumentation-openai-agents = [
+    "opentelemetry.instrumentation.openai_agents",
+]
+opentelemetry-instrumentation-openai-agents-v2 = [
+    "opentelemetry.instrumentation.openai_agents",
+]
+opentelemetry-instrumentation-openai-v2 = [
+    "opentelemetry.instrumentation.openai_v2",
+]
+opentelemetry-instrumentation-system-metrics = [
+    "opentelemetry.instrumentation.system_metrics",
+]
+opentelemetry-propagator-aws-xray = ["opentelemetry.propagators.aws"]
+opentelemetry-propagator-b3 = ["opentelemetry.propagators.b3"]
+opentelemetry-propagator-gcp = [
+    "opentelemetry.propagators.cloud_trace_propagator",
+]
+opentelemetry-propagator-jaeger = ["opentelemetry.propagators.jaeger"]
+opentelemetry-propagator-ot-trace = ["opentelemetry.propagators.ot_trace"]
+opentelemetry-resourcedetector-gcp = [
+    "opentelemetry.resourcedetector.gcp_resource_detector",
+]
+opentelemetry-semantic-conventions = ["opentelemetry.semconv"]
+opentelemetry-semantic-conventions-ai = ["opentelemetry.semconv_ai"]
+opentelemetry-test-utils = ["opentelemetry.test"]
+orb-billing = ["orb"]
+ortools = ["pybind11_abseil"]
+packageurl-python = ["packageurl"]
+pact-python = ["pact"]
+pact-python-ffi = ["pact_ffi"]
+paddlepaddle = ["paddle"]
+paho-mqtt = ["paho"]
+panzi-json-logic = ["json_logic"]
+parallel-web = ["parallel"]
+param = ["numbergen"]
+parsley = ["ometa", "terml"]
+pastedeploy = ["paste.deploy"]
+patool = ["patoolib"]
+paypal-checkout-serversdk = ["paypalcheckoutsdk"]
+pdbpp = ["pdbpp_utils"]
+pdfminer-six = ["pdfminer"]
+pedalboard = ["pedalboard_native"]
+peewee = ["playhouse", "pwiz"]
+pefile = ["ordlookup", "peutils"]
+pep8-naming = ["pep8ext_naming"]
+perplexityai = ["perplexity"]
+phonenumberslite = ["phonenumbers"]
+pillow = ["PIL"]
+pillow-avif-plugin = ["pillow_avif"]
+pinecone-client = ["pinecone"]
+pinecone-plugin-assistant = ["pinecone_plugins.assistant"]
+pip-licenses = ["piplicenses"]
+pip-requirements-parser = ["packaging_legacy_version"]
+pip-tools = ["piptools"]
+pipecat-ai = ["pipecat"]
+piper-tts = ["piper"]
+plac = ["plac_core", "plac_ext", "plac_tk"]
+plato-sdk-v2 = ["plato"]
+plum-dispatch = ["plum"]
+polyfile-weave = ["polyfile", "polymerge"]
+posthog-hogland = ["hogland"]
+ppft = ["pp"]
+presto-python-client = ["prestodb"]
+prime-pydantic-config = ["pydantic_config"]
+primepy = ["primePy"]
+prisma = ["prisma_cleanup"]
+progressbar2 = ["progressbar"]
+proto-plus = ["proto"]
+protobuf = ["google.protobuf"]
+protobuf-py = ["protobuf"]
+protobuf-py-ext = ["protobuf_ext"]
+proxy-protocol = ["proxyprotocol"]
+psycopg2-binary = ["psycopg2"]
+pulsar-client = ["pulsar"]
+pure-sasl = ["puresasl"]
+purecloudplatformclientv2 = ["PureCloudPlatformClientV2"]
+py-cpuinfo = ["cpuinfo"]
+py-cpuinfo2 = ["cpuinfo"]
+py-deviceid = ["deviceid"]
+py-key-value-aio = ["key_value.aio"]
+py-key-value-shared = ["key_value.shared"]
+py-money = ["money"]
+py-moneyed = ["moneyed"]
+py-openapi-schema-to-json-schema = ["openapi_schema_to_json_schema"]
+pyahocorasick = ["ahocorasick"]
+pyasynchat = ["asynchat"]
+pyasyncore = ["asyncore"]
+pyautogen = ["autogen"]
+pybars3 = ["pybars"]
+pybase62 = ["base62"]
+pybcj = ["bcj"]
+pybytebuffer = ["PyByteBuffer"]
+pycairo = ["cairo"]
+pycapnp = ["capnp"]
+pycasbin = ["casbin"]
+pycep-parser = ["pycep"]
+pycollada = ["collada"]
+pycryptodome = ["Crypto"]
+pycryptodomex = ["Cryptodome"]
+pycurl = ["curl"]
+pydantic-ai-slim = ["pydantic_ai"]
+pydantic-monty-client = ["pydantic_monty"]
+pydeprecate = ["deprecate"]
+pydevd = [
+    "pydev_app_engine_debug_startup",
+    "pydev_ipython",
+    "pydev_run_in_console",
+    "pydevconsole",
+    "pydevd_attach_to_process.add_code_to_python_process",
+    "pydevd_attach_to_process.attach_linux_amd64",
+    "pydevd_attach_to_process.attach_linux_x86",
+    "pydevd_attach_to_process.attach_pydevd",
+    "pydevd_attach_to_process.attach_script",
+    "pydevd_attach_to_process.linux_and_mac.lldb_prepare",
+    "pydevd_attach_to_process.winappdbg",
+    "pydevd_file_utils",
+    "pydevd_plugins",
+    "pydevd_tracing",
+    "setup_pydevd_cython",
+]
+pydispatcher = ["pydispatch"]
+pydocket = ["docket"]
+pyelftools = ["elftools"]
+pyenchant = ["enchant"]
+pyerfa = ["erfa"]
+pyexasol = ["exasol.driver", "pyexasol_utils"]
+pyfarmhash = ["farmhash"]
+pygithub = ["github"]
+pyhamcrest = ["hamcrest"]
+pyhcl = ["hcl"]
+pyhumps = ["humps"]
+pyiceberg = ["fb303", "hive_metastore"]
+pyinstaller = ["PyInstaller"]
+pyjpegls = ["jpeg_ls"]
+pyjwt = ["jwt"]
+pylance = ["lance"]
+pylibjpeg-libjpeg = ["libjpeg"]
+pylibjpeg-openjpeg = ["openjpeg"]
+pylibjpeg-rle = ["rle"]
+pylink-square = ["pylink"]
+pymarkdownlnt = ["pymarkdown"]
+pymdown-extensions = ["pymdownx"]
+pymongo = ["bson", "gridfs"]
+pympp = ["mpp"]
+pymupdf = ["fitz"]
+pymupdf-layout = ["pymupdf.features", "pymupdf.tgif"]
+pynacl = ["nacl"]
+pynose = ["nose"]
+pynvml = ["pynvml_utils"]
+pynvvideocodec = ["PyNvVideoCodec"]
+pyobjc-core = [
+    "PyObjCTools.KeyValueCoding",
+    "PyObjCTools.MachSignals",
+    "PyObjCTools.Signals",
+    "PyObjCTools.TestSupport",
+    "objc",
+]
+pyobjc-framework-cocoa = [
+    "AppKit",
+    "Cocoa",
+    "CoreFoundation",
+    "Foundation",
+    "PyObjCTools.AppCategories",
+    "PyObjCTools.AppHelper",
+    "PyObjCTools.Conversion",
+    "PyObjCTools.FndCategories",
+]
+pyobjc-framework-quartz = ["Quartz"]
+pyodps = ["notebooks.nb_init", "odps", "odps_scripts"]
+pyopengl = ["OpenGL"]
+pyopenssl = ["OpenSSL"]
+pypandoc-binary = ["pypandoc"]
+pypdf2 = ["PyPDF2"]
+pypdfium2 = ["pypdfium2_cfg", "pypdfium2_cli", "pypdfium2_raw"]
+pypng = ["png"]
+pyqt5 = ["PyQt5"]
+pyqt5-sip = ["PyQt5.sip"]
+pyqt6 = ["PyQt6"]
+pyqt6-sip = ["PyQt6.sip"]
+pyro-api = ["pyroapi"]
+pyro-ppl = ["pyro"]
+pyroscope-io = ["pyroscope"]
+pysaml2 = ["saml2"]
+pyserde = ["serde"]
+pyserial = ["serial"]
+pyshp = ["shapefile"]
+pyside6 = ["PySide6"]
+pyside6-addons = [
+    "PySide6.Qt3DAnimation",
+    "PySide6.Qt3DCore",
+    "PySide6.Qt3DExtras",
+    "PySide6.Qt3DInput",
+    "PySide6.Qt3DLogic",
+    "PySide6.Qt3DRender",
+    "PySide6.QtAsyncio",
+    "PySide6.QtAxContainer",
+    "PySide6.QtBluetooth",
+    "PySide6.QtCanvasPainter",
+    "PySide6.QtCharts",
+    "PySide6.QtDataVisualization",
+    "PySide6.QtGraphs",
+    "PySide6.QtGraphsWidgets",
+    "PySide6.QtHttpServer",
+    "PySide6.QtLocation",
+    "PySide6.QtMultimedia",
+    "PySide6.QtMultimediaWidgets",
+    "PySide6.QtNetworkAuth",
+    "PySide6.QtNfc",
+    "PySide6.QtPositioning",
+    "PySide6.QtQuick3D",
+    "PySide6.QtRemoteObjects",
+    "PySide6.QtScxml",
+    "PySide6.QtSensors",
+    "PySide6.QtSerialBus",
+    "PySide6.QtSerialPort",
+    "PySide6.QtSpatialAudio",
+    "PySide6.QtStateMachine",
+    "PySide6.QtTextToSpeech",
+    "PySide6.QtWebChannel",
+    "PySide6.QtWebSockets",
+]
+pyside6-essentials = [
+    "PySide6.QtConcurrent",
+    "PySide6.QtCore",
+    "PySide6.QtDBus",
+    "PySide6.QtDesigner",
+    "PySide6.QtGui",
+    "PySide6.QtHelp",
+    "PySide6.QtLabsStyleKit",
+    "PySide6.QtNetwork",
+    "PySide6.QtOpenGL",
+    "PySide6.QtOpenGLWidgets",
+    "PySide6.QtPrintSupport",
+    "PySide6.QtQml",
+    "PySide6.QtQmlFeatures",
+    "PySide6.QtQuick",
+    "PySide6.QtQuickControls2",
+    "PySide6.QtQuickTest",
+    "PySide6.QtQuickWidgets",
+    "PySide6.QtSql",
+    "PySide6.QtSvg",
+    "PySide6.QtSvgWidgets",
+    "PySide6.QtTest",
+    "PySide6.QtUiTools",
+    "PySide6.QtWidgets",
+    "PySide6.QtXml",
+    "PySide6.scripts",
+    "PySide6.support",
+]
+pysimdjson = ["csimdjson", "simdjson"]
+pysmb = ["nmb", "smb"]
+pysocks = ["socks", "sockshandler"]
+pyspellchecker = ["spellchecker"]
+pyspnego = ["spnego"]
+pystac-core = ["pystac"]
+pystac-ext-classification = ["pystac.extensions.classification"]
+pystac-ext-datacube = ["pystac.extensions.datacube"]
+pystac-ext-eo = ["pystac.extensions.eo"]
+pystac-ext-file = ["pystac.extensions.file"]
+pystac-ext-grid = ["pystac.extensions.grid"]
+pystac-ext-item-assets = ["pystac.extensions.item_assets"]
+pystac-ext-label = ["pystac.extensions.label"]
+pystac-ext-mgrs = ["pystac.extensions.mgrs"]
+pystac-ext-mlm = ["pystac.extensions.mlm"]
+pystac-ext-pointcloud = ["pystac.extensions.pointcloud"]
+pystac-ext-projection = ["pystac.extensions.projection"]
+pystac-ext-raster = ["pystac.extensions.raster"]
+pystac-ext-render = ["pystac.extensions.render"]
+pystac-ext-sar = ["pystac.extensions.sar"]
+pystac-ext-sat = ["pystac.extensions.sat"]
+pystac-ext-scientific = ["pystac.extensions.scientific"]
+pystac-ext-storage = ["pystac.extensions.storage"]
+pystac-ext-table = ["pystac.extensions.table"]
+pystac-ext-timestamps = ["pystac.extensions.timestamps"]
+pystac-ext-version = ["pystac.extensions.version"]
+pystac-ext-view = ["pystac.extensions.view"]
+pystac-ext-xarray-assets = ["pystac.extensions.xarray_assets"]
+pystan = ["stan"]
+pystemmer = ["Stemmer"]
+pyswisseph = ["swisseph"]
+pytelegrambotapi = ["telebot"]
+pytest = ["py"]
+pytest-json-ctrf = ["ctrf"]
+pytest-json-report = ["pytest_jsonreport"]
+pytest-qt = ["pytestqt"]
+pytest-race = ["race"]
+pytest-random-order = ["random_order"]
+pytest-runner = ["ptr"]
+pytest-testinfra = ["testinfra"]
+pytest-testmon = ["testmon"]
+pytest-xdist = ["xdist"]
+pytest-xprocess = ["xprocess"]
+python-arango = ["arango"]
+python-barcode = ["barcode"]
+python-benedict = ["benedict"]
+python-bidi = ["bidi"]
+python-box = ["box"]
+python-can = ["can"]
+python-consul = ["consul"]
+python-crfsuite = ["pycrfsuite"]
+python-crontab = ["cronlog", "crontab", "crontabs"]
+python-daemon = ["daemon"]
+python-dateutil = ["dateutil"]
+python-debian = ["debian"]
+python-decouple = ["decouple"]
+python-docx = ["docx"]
+python-dotenv = ["dotenv"]
+python-editor = ["editor"]
+python-engineio = ["engineio"]
+python-frontmatter = ["frontmatter"]
+python-fsutil = ["fsutil"]
+python-gdcm = ["gdcm"]
+python-geohash = ["geohash", "jpgrid", "jpiarea", "quadtree"]
+python-gitlab = ["gitlab"]
+python-gnupg = ["gnupg"]
+python-hcl2 = ["hcl2"]
+python-iso639 = ["iso639"]
+python-jenkins = ["jenkins"]
+python-jose = ["jose"]
+python-json-logger = ["pythonjsonlogger"]
+python-jsonpath = ["jsonpath"]
+python-keycloak = ["keycloak"]
+python-keystoneclient = ["keystoneclient"]
+python-levenshtein = ["Levenshtein"]
+python-liquid = ["liquid"]
+python-logging-loki = ["logging_loki"]
+python-lsp-jsonrpc = ["pylsp_jsonrpc"]
+python-lsp-server = ["pylsp"]
+python-magic = ["magic"]
+python-memcached = ["memcache"]
+python-monkey-business = ["monkeybiz"]
+python-multipart = ["multipart"]
+python-oxmsg = ["oxmsg"]
+python-pam = ["pam"]
+python-pptx = ["pptx"]
+python-qpid-proton = ["cproton", "cproton_ffi", "proton"]
+python-quickbooks = ["quickbooks"]
+python-rapidjson = ["rapidjson"]
+python-redis-lock = ["redis_lock"]
+python-schema-registry-client = ["schema_registry"]
+python-semantic-release = ["semantic_release"]
+python-slugify = ["slugify"]
+python-snappy = ["snappy"]
+python-socketio = ["socketio"]
+python-statemachine = ["statemachine"]
+python-stdnum = ["stdnum"]
+python-subunit = ["subunit"]
+python-tds = ["pytds"]
+python-telegram-bot = ["telegram"]
+python-ulid = ["ulid"]
+python-vagrant = ["vagrant"]
+python-whois = ["whois"]
+python-xlib = ["Xlib"]
+python3-openid = ["openid"]
+python3-saml = ["onelogin"]
+pythonnet = ["clr"]
+pytorch-lightning = ["lightning_fabric"]
+pytorch-nlp = ["torchnlp"]
+pytrec-eval-terrier = ["pytrec_eval", "pytrec_eval_ext"]
+pytype = ["pytype_extensions"]
+pyusb = ["usb"]
+pyvespa = ["vespa"]
+pyvmomi = ["pyVim", "pyVmomi", "vsanapiutils", "vsanmgmtObjects"]
+pywavelets = ["pywt"]
+pywebview = ["webview"]
+pywin32 = [
+    "adodbapi",
+    "afxres",
+    "commctrl",
+    "dde",
+    "isapi",
+    "mmapfile",
+    "mmsystem",
+    "netbios",
+    "ntsecuritycon",
+    "odbc",
+    "perfmon",
+    "pythoncom",
+    "pywin",
+    "pywin32_bootstrap",
+    "pywin32_testutil",
+    "pywintypes",
+    "rasutil",
+    "regcheck",
+    "regutil",
+    "servicemanager",
+    "sspi",
+    "sspicon",
+    "timer",
+    "win2kras",
+    "win32api",
+    "win32clipboard",
+    "win32com",
+    "win32comext.adsi",
+    "win32comext.authorization",
+    "win32comext.axcontrol",
+    "win32comext.axdebug",
+    "win32comext.axscript",
+    "win32comext.bits",
+    "win32comext.directsound",
+    "win32comext.ifilter",
+    "win32comext.internet",
+    "win32comext.mapi",
+    "win32comext.propsys",
+    "win32comext.shell",
+    "win32comext.taskscheduler",
+    "win32con",
+    "win32console",
+    "win32cred",
+    "win32crypt",
+    "win32cryptcon",
+    "win32event",
+    "win32evtlog",
+    "win32evtlogutil",
+    "win32file",
+    "win32gui",
+    "win32gui_struct",
+    "win32help",
+    "win32inet",
+    "win32inetcon",
+    "win32job",
+    "win32lz",
+    "win32net",
+    "win32netcon",
+    "win32pdh",
+    "win32pdhquery",
+    "win32pdhutil",
+    "win32pipe",
+    "win32print",
+    "win32process",
+    "win32profile",
+    "win32ras",
+    "win32rcparser",
+    "win32security",
+    "win32service",
+    "win32serviceutil",
+    "win32timezone",
+    "win32trace",
+    "win32traceutil",
+    "win32transaction",
+    "win32ts",
+    "win32ui",
+    "win32uiole",
+    "win32verstamp",
+    "win32wnet",
+    "winerror",
+    "winioctlcon",
+    "winnt",
+    "winperf",
+    "winxpgui",
+    "winxptheme",
+]
+pywin32-ctypes = ["win32ctypes"]
+pywinpty = ["winpty"]
+pywinrm = ["winrm"]
+pyxdg = ["xdg"]
+pyyaml = ["yaml"]
+pyyaml-env-tag = ["yaml_env_tag"]
+pyyaml-ft = ["yaml_ft"]
+pyyaml-include = ["yaml_include"]
+pyzmq = ["zmq"]
+quack-kernels = ["quack"]
+quantlib = ["QuantLib"]
+rangehttpserver = ["RangeHTTPServer"]
+readability-lxml = ["readability"]
+redis-py-cluster = ["rediscluster"]
+reductoai = ["reducto"]
+requirements-parser = ["requirements"]
+rerun-sdk = ["rerun", "rerun_bindings", "rerun_cli"]
+restrictedpython = ["RestrictedPython"]
+retell-sdk = ["retell"]
+retry2 = ["retry"]
+rlpycairo = ["rlPyCairo"]
+robotframework = ["robot"]
+robotframework-browser = ["Browser"]
+robotframework-pythonlibcore = ["robotlibcore"]
+robotframework-requests = ["RequestsLibrary"]
+robotframework-robocop = ["robocop"]
+robotframework-seleniumlibrary = ["SeleniumLibrary"]
+rpds-py = ["rpds"]
+rtfde = ["RTFDE"]
+s3cmd = ["S3"]
+safe-pysha3 = ["sha3"]
+sagemaker-core = ["sagemaker.lineage"]
+sagemaker-train = ["sagemaker.ai_registry"]
+salt-lint = ["saltlint"]
+scikit-base = ["skbase"]
+scikit-build = ["skbuild"]
+scikit-image = ["skimage"]
+scikit-learn = ["sklearn"]
+scikit-network = ["sknetwork"]
+scikit-rf = ["skrf"]
+scons = ["SCons"]
+scylla-driver = ["cassandra"]
+segment-analytics-python = ["segment.analytics"]
+seleniumbase = ["mcp_servers", "sbase"]
+semantic-link-labs = ["sempy_labs"]
+semantic-link-sempy = ["sempy"]
+semgrep = ["semdep"]
+sglang-kernel = ["sgl_kernel", "triton_kernels"]
+shandy-sqlfmt = ["sqlfmt"]
+sherpa-onnx-core = ["sherpa_onnx.lib.libonnxruntime"]
+shrub-py = ["shrub"]
+sigstore-rekor-types = ["rekor_types"]
+simpleitk = ["SimpleITK"]
+skia-python = ["skia"]
+skillsaw = ["claudelint"]
+skypilot = ["sky", "sky_templates"]
+slack-sdk = ["slack"]
+slackclient = ["slack"]
+smartlingapisdk = ["smartlingApiSdk"]
+smartsheet-python-sdk = ["smartsheet"]
+smbprotocol = ["smbclient"]
+snakebite-py3 = ["snakebite"]
+snowflake-connector-python = ["snowflake.connector"]
+snowflake-snowpark-python = ["snowflake.snowpark"]
+social-auth-app-django = ["social_django"]
+social-auth-core = ["social_core"]
+soda-core-spark = ["soda.data_sources.spark_data_source"]
+soda-core-spark-df = [
+    "soda.data_sources.spark_df_connection",
+    "soda.data_sources.spark_df_contract_data_source",
+    "soda.data_sources.spark_df_cursor",
+    "soda.data_sources.spark_df_data_source",
+]
+solana = ["spl"]
+spark-nlp = ["com", "sparknlp"]
+sparqlwrapper = ["SPARQLWrapper"]
+speechrecognition = ["speech_recognition"]
+sphinx-argparse = ["sphinxarg"]
+sphinx-autoapi = ["autoapi"]
+sphinxcontrib-httpdomain = ["sphinxcontrib.autohttp"]
+splunk-sdk = ["splunklib"]
+sqlalchemy-bigquery = ["sqlalchemy_bigquery_vendored"]
+sqlalchemy-spanner = ["google.cloud.sqlalchemy_spanner"]
+sqlalchemy-stubs = ["sqlmypy", "sqltyping"]
+sqlglotc = [
+    "sqlglot.anonymize",
+    "sqlglot.errors",
+    "sqlglot.executor.table",
+    "sqlglot.expressions.aggregate",
+    "sqlglot.expressions.array",
+    "sqlglot.expressions.builders",
+    "sqlglot.expressions.constraints",
+    "sqlglot.expressions.core",
+    "sqlglot.expressions.datatypes",
+    "sqlglot.expressions.ddl",
+    "sqlglot.expressions.dml",
+    "sqlglot.expressions.functions",
+    "sqlglot.expressions.json",
+    "sqlglot.expressions.math",
+    "sqlglot.expressions.properties",
+    "sqlglot.expressions.query",
+    "sqlglot.expressions.string",
+    "sqlglot.expressions.temporal",
+    "sqlglot.generator",
+    "sqlglot.generators.athena",
+    "sqlglot.generators.bigquery",
+    "sqlglot.generators.clickhouse",
+    "sqlglot.generators.databricks",
+    "sqlglot.generators.dax",
+    "sqlglot.generators.doris",
+    "sqlglot.generators.dremio",
+    "sqlglot.generators.drill",
+    "sqlglot.generators.druid",
+    "sqlglot.generators.duckdb",
+    "sqlglot.generators.dune",
+    "sqlglot.generators.exasol",
+    "sqlglot.generators.fabric",
+    "sqlglot.generators.hive",
+    "sqlglot.generators.materialize",
+    "sqlglot.generators.mysql",
+    "sqlglot.generators.oracle",
+    "sqlglot.generators.postgres",
+    "sqlglot.generators.presto",
+    "sqlglot.generators.prql",
+    "sqlglot.generators.python",
+    "sqlglot.generators.redshift",
+    "sqlglot.generators.risingwave",
+    "sqlglot.generators.singlestore",
+    "sqlglot.generators.snowflake",
+    "sqlglot.generators.solr",
+    "sqlglot.generators.spark",
+    "sqlglot.generators.spark2",
+    "sqlglot.generators.sqlite",
+    "sqlglot.generators.starrocks",
+    "sqlglot.generators.tableau",
+    "sqlglot.generators.teradata",
+    "sqlglot.generators.trino",
+    "sqlglot.generators.tsql",
+    "sqlglot.helper",
+    "sqlglot.lineage",
+    "sqlglot.optimizer.annotate_types",
+    "sqlglot.optimizer.canonicalize_internal_names",
+    "sqlglot.optimizer.isolate_table_selects",
+    "sqlglot.optimizer.normalize_identifiers",
+    "sqlglot.optimizer.qualify",
+    "sqlglot.optimizer.qualify_columns",
+    "sqlglot.optimizer.qualify_tables",
+    "sqlglot.optimizer.resolver",
+    "sqlglot.optimizer.scope",
+    "sqlglot.optimizer.simplify",
+    "sqlglot.parser",
+    "sqlglot.parsers.athena",
+    "sqlglot.parsers.base",
+    "sqlglot.parsers.bigquery",
+    "sqlglot.parsers.clickhouse",
+    "sqlglot.parsers.databricks",
+    "sqlglot.parsers.dax",
+    "sqlglot.parsers.doris",
+    "sqlglot.parsers.dremio",
+    "sqlglot.parsers.drill",
+    "sqlglot.parsers.druid",
+    "sqlglot.parsers.duckdb",
+    "sqlglot.parsers.dune",
+    "sqlglot.parsers.exasol",
+    "sqlglot.parsers.fabric",
+    "sqlglot.parsers.hive",
+    "sqlglot.parsers.materialize",
+    "sqlglot.parsers.mysql",
+    "sqlglot.parsers.oracle",
+    "sqlglot.parsers.postgres",
+    "sqlglot.parsers.presto",
+    "sqlglot.parsers.prql",
+    "sqlglot.parsers.redshift",
+    "sqlglot.parsers.risingwave",
+    "sqlglot.parsers.singlestore",
+    "sqlglot.parsers.snowflake",
+    "sqlglot.parsers.solr",
+    "sqlglot.parsers.spark",
+    "sqlglot.parsers.spark2",
+    "sqlglot.parsers.sqlite",
+    "sqlglot.parsers.starrocks",
+    "sqlglot.parsers.tableau",
+    "sqlglot.parsers.teradata",
+    "sqlglot.parsers.trino",
+    "sqlglot.parsers.tsql",
+    "sqlglot.serde",
+    "sqlglot.time",
+    "sqlglot.tokenizer_core",
+    "sqlglot.trie",
+]
+sseclient-py = ["sseclient"]
+stactools-met-office-deterministic = ["stactools.met_office_deterministic"]
+standard-aifc = ["aifc"]
+standard-chunk = ["chunk"]
+standard-imghdr = ["imghdr"]
+standard-sunau = ["sunau"]
+starkbank-ecdsa = ["ellipticcurve"]
+std-uritemplate = ["stduritemplate"]
+stix2-patterns = ["stix2patterns"]
+stomp-py = ["stomp"]
+stpyv8 = ["STPyV8"]
+strands-agents = ["strands"]
+strands-agents-tools = ["strands_tools"]
+strawberry-graphql = ["strawberry"]
+strawberry-graphql-django = ["strawberry_django"]
+stream-python = ["stream"]
+streamlit-aggrid = ["st_aggrid"]
+suds-community = ["suds"]
+suds-py3 = ["suds"]
+svg-path = ["svg"]
+svix-ksuid = ["ksuid"]
+swe-rex = ["swerex"]
+sympy = ["isympy"]
+synapseml = [
+    "synapse.ml.automl",
+    "synapse.ml.causal",
+    "synapse.ml.cntk",
+    "synapse.ml.cognitive",
+    "synapse.ml.core",
+    "synapse.ml.cyber",
+    "synapse.ml.dl",
+    "synapse.ml.downloader",
+    "synapse.ml.explainers",
+    "synapse.ml.exploratory",
+    "synapse.ml.featurize",
+    "synapse.ml.hf",
+    "synapse.ml.image",
+    "synapse.ml.io",
+    "synapse.ml.isolationforest",
+    "synapse.ml.lightgbm",
+    "synapse.ml.nn",
+    "synapse.ml.onnx",
+    "synapse.ml.opencv",
+    "synapse.ml.plot",
+    "synapse.ml.policyeval",
+    "synapse.ml.recommendation",
+    "synapse.ml.services",
+    "synapse.ml.stages",
+    "synapse.ml.train",
+    "synapse.ml.vw",
+]
+systemrdl-compiler = ["systemrdl"]
+ta-lib = ["talib"]
+tabula-py = ["tabula"]
+taskcluster-taskgraph = ["taskgraph"]
+tavily-python = ["tavily"]
+tecton = [
+    "protoc_gen_openapiv2",
+    "tecton_athena",
+    "tecton_core",
+    "tecton_materialization",
+    "tecton_proto",
+    "tecton_spark",
+]
+telnetlib3 = ["telnetlib"]
+tencentcloud-sdk-python-common = ["tencentcloud"]
+tensorboardx = ["tensorboardX"]
+tensorflow-cpu = ["tensorflow"]
+tensorflow-serving-api = ["tensorflow_serving"]
+text2num = ["text_to_num"]
+tf-playwright-stealth = [
+    "playwright_stealth.core",
+    "playwright_stealth.properties",
+    "playwright_stealth.stealth",
+]
+tiktoken = ["tiktoken_ext.openai_public"]
+toolz = ["tlz"]
+torch = ["functorch", "torchgen"]
+torch-memory-saver = [
+    "torch_memory_saver_hook_mode_preload",
+    "torch_memory_saver_hook_mode_preload_cu12",
+    "torch_memory_saver_hook_mode_preload_cu13",
+    "torch_memory_saver_hook_mode_torch",
+    "torch_memory_saver_hook_mode_torch_cu12",
+    "torch_memory_saver_hook_mode_torch_cu13",
+]
+tox-uv = ["tox_uv_meta"]
+tox-uv-bare = ["tox_uv"]
+trame-client = [
+    "trame.modules.www",
+    "trame.ui.html",
+    "trame.widgets.client",
+    "trame.widgets.html",
+    "trame.widgets.react",
+]
+trame-components = ["trame.modules.trame", "trame.widgets.trame"]
+trame-vtk = [
+    "trame.modules.paraview",
+    "trame.modules.vtk",
+    "trame.tools.vtksz2html",
+    "trame.widgets.paraview",
+    "trame.widgets.vtk",
+]
+trame-vuetify = [
+    "trame.modules.vuetify",
+    "trame.modules.vuetify2",
+    "trame.modules.vuetify3",
+    "trame.modules.vuetify3_lab",
+    "trame.modules.vuetify4",
+    "trame.modules.vuetify4_lab",
+    "trame.ui.vuetify",
+    "trame.ui.vuetify2",
+    "trame.ui.vuetify3",
+    "trame.ui.vuetify4",
+    "trame.widgets.vuetify",
+    "trame.widgets.vuetify2",
+    "trame.widgets.vuetify3",
+    "trame.widgets.vuetify4",
+]
+tritonclient = [
+    "tritonclientutils",
+    "tritongrpcclient",
+    "tritonhttpclient",
+    "tritonshmutils",
+]
+tuspy = ["tusclient"]
+txtorcon = ["twisted.plugins.txtorcon_endpoint_parser"]
+types-boto3-full = [
+    "types_boto3_accessanalyzer",
+    "types_boto3_account",
+    "types_boto3_account_access",
+    "types_boto3_acm",
+    "types_boto3_acm_pca",
+    "types_boto3_agent_registry",
+    "types_boto3_agent_registry_control",
+    "types_boto3_aiops",
+    "types_boto3_amp",
+    "types_boto3_amplify",
+    "types_boto3_amplifybackend",
+    "types_boto3_amplifyuibuilder",
+    "types_boto3_apigateway",
+    "types_boto3_apigatewaymanagementapi",
+    "types_boto3_apigatewayv2",
+    "types_boto3_appconfig",
+    "types_boto3_appconfigdata",
+    "types_boto3_appfabric",
+    "types_boto3_appflow",
+    "types_boto3_appintegrations",
+    "types_boto3_application_autoscaling",
+    "types_boto3_application_insights",
+    "types_boto3_application_signals",
+    "types_boto3_applicationcostprofiler",
+    "types_boto3_appmesh",
+    "types_boto3_apprunner",
+    "types_boto3_appstream",
+    "types_boto3_appsync",
+    "types_boto3_arc_region_switch",
+    "types_boto3_arc_zonal_shift",
+    "types_boto3_artifact",
+    "types_boto3_athena",
+    "types_boto3_auditmanager",
+    "types_boto3_autoscaling",
+    "types_boto3_autoscaling_plans",
+    "types_boto3_b2bi",
+    "types_boto3_backup",
+    "types_boto3_backup_gateway",
+    "types_boto3_backupsearch",
+    "types_boto3_batch",
+    "types_boto3_bcm_dashboards",
+    "types_boto3_bcm_data_exports",
+    "types_boto3_bcm_pricing_calculator",
+    "types_boto3_bcm_recommended_actions",
+    "types_boto3_bedrock",
+    "types_boto3_bedrock_agent",
+    "types_boto3_bedrock_agent_runtime",
+    "types_boto3_bedrock_agentcore",
+    "types_boto3_bedrock_agentcore_control",
+    "types_boto3_bedrock_data_automation",
+    "types_boto3_bedrock_data_automation_runtime",
+    "types_boto3_bedrock_runtime",
+    "types_boto3_billing",
+    "types_boto3_billingconductor",
+    "types_boto3_braket",
+    "types_boto3_budgets",
+    "types_boto3_ce",
+    "types_boto3_chatbot",
+    "types_boto3_chime",
+    "types_boto3_chime_sdk_identity",
+    "types_boto3_chime_sdk_media_pipelines",
+    "types_boto3_chime_sdk_meetings",
+    "types_boto3_chime_sdk_messaging",
+    "types_boto3_chime_sdk_voice",
+    "types_boto3_cleanrooms",
+    "types_boto3_cleanroomsml",
+    "types_boto3_cloud9",
+    "types_boto3_cloudcontrol",
+    "types_boto3_clouddirectory",
+    "types_boto3_cloudformation",
+    "types_boto3_cloudfront",
+    "types_boto3_cloudfront_keyvaluestore",
+    "types_boto3_cloudhsm",
+    "types_boto3_cloudhsmv2",
+    "types_boto3_cloudsearch",
+    "types_boto3_cloudsearchdomain",
+    "types_boto3_cloudtrail",
+    "types_boto3_cloudtrail_data",
+    "types_boto3_cloudwatch",
+    "types_boto3_cloudwatchomni",
+    "types_boto3_codeartifact",
+    "types_boto3_codebuild",
+    "types_boto3_codecatalyst",
+    "types_boto3_codecommit",
+    "types_boto3_codeconnections",
+    "types_boto3_codedeploy",
+    "types_boto3_codeguru_reviewer",
+    "types_boto3_codeguru_security",
+    "types_boto3_codeguruprofiler",
+    "types_boto3_codepipeline",
+    "types_boto3_codestar_connections",
+    "types_boto3_codestar_notifications",
+    "types_boto3_cognito_identity",
+    "types_boto3_cognito_idp",
+    "types_boto3_cognito_sync",
+    "types_boto3_comprehend",
+    "types_boto3_comprehendmedical",
+    "types_boto3_compute_optimizer",
+    "types_boto3_compute_optimizer_automation",
+    "types_boto3_config",
+    "types_boto3_connect",
+    "types_boto3_connect_contact_lens",
+    "types_boto3_connectcampaigns",
+    "types_boto3_connectcampaignsv2",
+    "types_boto3_connectcases",
+    "types_boto3_connecthealth",
+    "types_boto3_connectparticipant",
+    "types_boto3_controlcatalog",
+    "types_boto3_controltower",
+    "types_boto3_cost_optimization_hub",
+    "types_boto3_cur",
+    "types_boto3_customer_profiles",
+    "types_boto3_databrew",
+    "types_boto3_dataexchange",
+    "types_boto3_datapipeline",
+    "types_boto3_datasync",
+    "types_boto3_datazone",
+    "types_boto3_dax",
+    "types_boto3_deadline",
+    "types_boto3_detective",
+    "types_boto3_devicefarm",
+    "types_boto3_devops_agent",
+    "types_boto3_devops_guru",
+    "types_boto3_directconnect",
+    "types_boto3_discovery",
+    "types_boto3_dlm",
+    "types_boto3_dms",
+    "types_boto3_docdb",
+    "types_boto3_docdb_elastic",
+    "types_boto3_drs",
+    "types_boto3_ds",
+    "types_boto3_ds_data",
+    "types_boto3_dsql",
+    "types_boto3_dynamodb",
+    "types_boto3_dynamodbstreams",
+    "types_boto3_ebs",
+    "types_boto3_ec2",
+    "types_boto3_ec2_instance_connect",
+    "types_boto3_ecr",
+    "types_boto3_ecr_public",
+    "types_boto3_ecs",
+    "types_boto3_efs",
+    "types_boto3_eks",
+    "types_boto3_eks_auth",
+    "types_boto3_elasticache",
+    "types_boto3_elasticbeanstalk",
+    "types_boto3_elb",
+    "types_boto3_elbv2",
+    "types_boto3_elementalinference",
+    "types_boto3_emr",
+    "types_boto3_emr_containers",
+    "types_boto3_emr_serverless",
+    "types_boto3_endusermessaging",
+    "types_boto3_entityresolution",
+    "types_boto3_es",
+    "types_boto3_eventbridgev2",
+    "types_boto3_events",
+    "types_boto3_evs",
+    "types_boto3_finspace",
+    "types_boto3_finspace_data",
+    "types_boto3_firehose",
+    "types_boto3_fis",
+    "types_boto3_fms",
+    "types_boto3_forecast",
+    "types_boto3_forecastquery",
+    "types_boto3_frauddetector",
+    "types_boto3_freetier",
+    "types_boto3_fsx",
+    "types_boto3_gamelift",
+    "types_boto3_gameliftstreams",
+    "types_boto3_geo_maps",
+    "types_boto3_geo_places",
+    "types_boto3_geo_routes",
+    "types_boto3_glacier",
+    "types_boto3_globalaccelerator",
+    "types_boto3_glue",
+    "types_boto3_grafana",
+    "types_boto3_greengrass",
+    "types_boto3_greengrassv2",
+    "types_boto3_groundstation",
+    "types_boto3_guardduty",
+    "types_boto3_health",
+    "types_boto3_healthlake",
+    "types_boto3_iam",
+    "types_boto3_iam_toolbox",
+    "types_boto3_identitystore",
+    "types_boto3_imagebuilder",
+    "types_boto3_importexport",
+    "types_boto3_inspector",
+    "types_boto3_inspector2",
+    "types_boto3_inspector_scan",
+    "types_boto3_interconnect",
+    "types_boto3_internetmonitor",
+    "types_boto3_invoicing",
+    "types_boto3_iot",
+    "types_boto3_iot_data",
+    "types_boto3_iot_jobs_data",
+    "types_boto3_iot_managed_integrations",
+    "types_boto3_iotdeviceadvisor",
+    "types_boto3_iotfleetwise",
+    "types_boto3_iotsecuretunneling",
+    "types_boto3_iotsitewise",
+    "types_boto3_iotthingsgraph",
+    "types_boto3_iottwinmaker",
+    "types_boto3_iotwireless",
+    "types_boto3_ivs",
+    "types_boto3_ivs_realtime",
+    "types_boto3_ivschat",
+    "types_boto3_kafka",
+    "types_boto3_kafkaconnect",
+    "types_boto3_kendra",
+    "types_boto3_kendra_ranking",
+    "types_boto3_keyspaces",
+    "types_boto3_keyspacesstreams",
+    "types_boto3_kinesis",
+    "types_boto3_kinesis_video_archived_media",
+    "types_boto3_kinesis_video_media",
+    "types_boto3_kinesis_video_signaling",
+    "types_boto3_kinesis_video_webrtc_storage",
+    "types_boto3_kinesisanalytics",
+    "types_boto3_kinesisanalyticsv2",
+    "types_boto3_kinesisvideo",
+    "types_boto3_kms",
+    "types_boto3_lakeformation",
+    "types_boto3_lambda",
+    "types_boto3_lambda_core",
+    "types_boto3_lambda_microvms",
+    "types_boto3_lambda_web",
+    "types_boto3_launch_wizard",
+    "types_boto3_lex_models",
+    "types_boto3_lex_runtime",
+    "types_boto3_lexv2_models",
+    "types_boto3_lexv2_runtime",
+    "types_boto3_license_manager",
+    "types_boto3_license_manager_linux_subscriptions",
+    "types_boto3_license_manager_user_subscriptions",
+    "types_boto3_lightsail",
+    "types_boto3_location",
+    "types_boto3_logs",
+    "types_boto3_lookoutequipment",
+    "types_boto3_m2",
+    "types_boto3_machinelearning",
+    "types_boto3_macie2",
+    "types_boto3_mailmanager",
+    "types_boto3_managedblockchain",
+    "types_boto3_managedblockchain_query",
+    "types_boto3_marketplace_agreement",
+    "types_boto3_marketplace_catalog",
+    "types_boto3_marketplace_deployment",
+    "types_boto3_marketplace_discovery",
+    "types_boto3_marketplace_entitlement",
+    "types_boto3_marketplace_reporting",
+    "types_boto3_marketplacecommerceanalytics",
+    "types_boto3_mediaconnect",
+    "types_boto3_mediaconvert",
+    "types_boto3_medialive",
+    "types_boto3_mediapackage",
+    "types_boto3_mediapackage_vod",
+    "types_boto3_mediapackagev2",
+    "types_boto3_mediastore",
+    "types_boto3_mediastore_data",
+    "types_boto3_mediatailor",
+    "types_boto3_medical_imaging",
+    "types_boto3_memorydb",
+    "types_boto3_meteringmarketplace",
+    "types_boto3_mgh",
+    "types_boto3_mgn",
+    "types_boto3_migration_hub_refactor_spaces",
+    "types_boto3_migrationhub_config",
+    "types_boto3_migrationhuborchestrator",
+    "types_boto3_migrationhubstrategy",
+    "types_boto3_mpa",
+    "types_boto3_mq",
+    "types_boto3_mturk",
+    "types_boto3_mwaa",
+    "types_boto3_mwaa_serverless",
+    "types_boto3_neptune",
+    "types_boto3_neptune_graph",
+    "types_boto3_neptunedata",
+    "types_boto3_network_firewall",
+    "types_boto3_network_security_manager",
+    "types_boto3_networkflowmonitor",
+    "types_boto3_networkmanager",
+    "types_boto3_networkmonitor",
+    "types_boto3_notifications",
+    "types_boto3_notificationscontacts",
+    "types_boto3_nova_act",
+    "types_boto3_oam",
+    "types_boto3_observabilityadmin",
+    "types_boto3_odb",
+    "types_boto3_omics",
+    "types_boto3_opensearch",
+    "types_boto3_opensearchserverless",
+    "types_boto3_organizations",
+    "types_boto3_osis",
+    "types_boto3_outposts",
+    "types_boto3_partnercentral_account",
+    "types_boto3_partnercentral_benefits",
+    "types_boto3_partnercentral_channel",
+    "types_boto3_partnercentral_revenue_measurement",
+    "types_boto3_partnercentral_selling",
+    "types_boto3_payment_cryptography",
+    "types_boto3_payment_cryptography_data",
+    "types_boto3_pca_connector_ad",
+    "types_boto3_pca_connector_scep",
+    "types_boto3_pcs",
+    "types_boto3_personalize",
+    "types_boto3_personalize_events",
+    "types_boto3_personalize_runtime",
+    "types_boto3_pi",
+    "types_boto3_pinpoint",
+    "types_boto3_pinpoint_email",
+    "types_boto3_pinpoint_sms_voice",
+    "types_boto3_pinpoint_sms_voice_v2",
+    "types_boto3_pipes",
+    "types_boto3_polly",
+    "types_boto3_pricing",
+    "types_boto3_pricing_plan_manager",
+    "types_boto3_proton",
+    "types_boto3_qapps",
+    "types_boto3_qbusiness",
+    "types_boto3_qconnect",
+    "types_boto3_quicksight",
+    "types_boto3_ram",
+    "types_boto3_rbin",
+    "types_boto3_rds",
+    "types_boto3_rds_data",
+    "types_boto3_redshift",
+    "types_boto3_redshift_data",
+    "types_boto3_redshift_serverless",
+    "types_boto3_rekognition",
+    "types_boto3_repostspace",
+    "types_boto3_resiliencehub",
+    "types_boto3_resiliencehubv2",
+    "types_boto3_resource_explorer_2",
+    "types_boto3_resource_groups",
+    "types_boto3_resourcegroupstaggingapi",
+    "types_boto3_rolesanywhere",
+    "types_boto3_route53",
+    "types_boto3_route53_recovery_cluster",
+    "types_boto3_route53_recovery_control_config",
+    "types_boto3_route53_recovery_readiness",
+    "types_boto3_route53domains",
+    "types_boto3_route53globalresolver",
+    "types_boto3_route53profiles",
+    "types_boto3_route53resolver",
+    "types_boto3_rtbfabric",
+    "types_boto3_rum",
+    "types_boto3_s3",
+    "types_boto3_s3control",
+    "types_boto3_s3files",
+    "types_boto3_s3outposts",
+    "types_boto3_s3tables",
+    "types_boto3_s3vectors",
+    "types_boto3_sagemaker",
+    "types_boto3_sagemaker_a2i_runtime",
+    "types_boto3_sagemaker_edge",
+    "types_boto3_sagemaker_featurestore_runtime",
+    "types_boto3_sagemaker_geospatial",
+    "types_boto3_sagemaker_metrics",
+    "types_boto3_sagemaker_runtime",
+    "types_boto3_sagemakerjobruntime",
+    "types_boto3_sagemakertrainingsessionruntime",
+    "types_boto3_savingsplans",
+    "types_boto3_scheduler",
+    "types_boto3_schemas",
+    "types_boto3_sdb",
+    "types_boto3_secretsmanager",
+    "types_boto3_security_ir",
+    "types_boto3_securityagent",
+    "types_boto3_securityhub",
+    "types_boto3_securitylake",
+    "types_boto3_serverlessrepo",
+    "types_boto3_service_quotas",
+    "types_boto3_servicecatalog",
+    "types_boto3_servicecatalog_appregistry",
+    "types_boto3_servicediscovery",
+    "types_boto3_ses",
+    "types_boto3_sesv2",
+    "types_boto3_shield",
+    "types_boto3_signer",
+    "types_boto3_signer_data",
+    "types_boto3_signin",
+    "types_boto3_simpledbv2",
+    "types_boto3_snow_device_management",
+    "types_boto3_snowball",
+    "types_boto3_sns",
+    "types_boto3_socialmessaging",
+    "types_boto3_sqs",
+    "types_boto3_ssm",
+    "types_boto3_ssm_contacts",
+    "types_boto3_ssm_guiconnect",
+    "types_boto3_ssm_incidents",
+    "types_boto3_ssm_quicksetup",
+    "types_boto3_ssm_sap",
+    "types_boto3_sso",
+    "types_boto3_sso_admin",
+    "types_boto3_sso_oidc",
+    "types_boto3_stepfunctions",
+    "types_boto3_storagegateway",
+    "types_boto3_sts",
+    "types_boto3_supplychain",
+    "types_boto3_support",
+    "types_boto3_support_app",
+    "types_boto3_supportauthz",
+    "types_boto3_sustainability",
+    "types_boto3_swf",
+    "types_boto3_synthetics",
+    "types_boto3_taxsettings",
+    "types_boto3_textract",
+    "types_boto3_timestream_influxdb",
+    "types_boto3_timestream_query",
+    "types_boto3_timestream_write",
+    "types_boto3_tnb",
+    "types_boto3_transcribe",
+    "types_boto3_transfer",
+    "types_boto3_translate",
+    "types_boto3_trustedadvisor",
+    "types_boto3_uxc",
+    "types_boto3_verifiedpermissions",
+    "types_boto3_voice_id",
+    "types_boto3_vpc_lattice",
+    "types_boto3_waf",
+    "types_boto3_waf_regional",
+    "types_boto3_wafv2",
+    "types_boto3_wellarchitected",
+    "types_boto3_wickr",
+    "types_boto3_wisdom",
+    "types_boto3_workdocs",
+    "types_boto3_workmail",
+    "types_boto3_workmailmessageflow",
+    "types_boto3_workspaces",
+    "types_boto3_workspaces_instances",
+    "types_boto3_workspaces_thin_client",
+    "types_boto3_workspaces_web",
+    "types_boto3_xray",
+]
+types-lxml = ["mypy_plugin_lxml"]
+uc-micro-py = ["uc_micro"]
+ulid-py = ["ulid"]
+ultralytics-thop = ["thop"]
+umap-learn = ["umap"]
+unclecode-litellm = ["litellm"]
+unittest-xml-reporting = ["xmlrunner"]
+unitycatalog-client = [
+    "unitycatalog.delta.api.delta_configuration_api",
+    "unitycatalog.delta.api.delta_tables_api",
+    "unitycatalog.delta.api.delta_temporary_credentials_api",
+    "unitycatalog.delta.internal",
+    "unitycatalog.delta.models.delta_add_commit_update",
+    "unitycatalog.delta.models.delta_array_type",
+    "unitycatalog.delta.models.delta_assert_etag",
+    "unitycatalog.delta.models.delta_assert_table_uuid",
+    "unitycatalog.delta.models.delta_catalog_config",
+    "unitycatalog.delta.models.delta_clustering_domain_metadata",
+    "unitycatalog.delta.models.delta_commit",
+    "unitycatalog.delta.models.delta_create_staging_table_request",
+    "unitycatalog.delta.models.delta_create_table_request",
+    "unitycatalog.delta.models.delta_credential_operation",
+    "unitycatalog.delta.models.delta_credentials_response",
+    "unitycatalog.delta.models.delta_data_type",
+    "unitycatalog.delta.models.delta_decimal_type",
+    "unitycatalog.delta.models.delta_domain_metadata_updates",
+    "unitycatalog.delta.models.delta_error_model",
+    "unitycatalog.delta.models.delta_error_response",
+    "unitycatalog.delta.models.delta_error_type",
+    "unitycatalog.delta.models.delta_load_table_response",
+    "unitycatalog.delta.models.delta_maintenance_operation",
+    "unitycatalog.delta.models.delta_map_type",
+    "unitycatalog.delta.models.delta_primitive_type",
+    "unitycatalog.delta.models.delta_protocol",
+    "unitycatalog.delta.models.delta_remove_domain_metadata_update",
+    "unitycatalog.delta.models.delta_remove_properties_update",
+    "unitycatalog.delta.models.delta_rename_table_request",
+    "unitycatalog.delta.models.delta_report_metrics_request",
+    "unitycatalog.delta.models.delta_report_metrics_request_report",
+    "unitycatalog.delta.models.delta_report_metrics_request_report_commit_report",
+    "unitycatalog.delta.models.delta_report_metrics_request_report_commit_report_file_size_histogram",
+    "unitycatalog.delta.models.delta_row_tracking_domain_metadata",
+    "unitycatalog.delta.models.delta_set_domain_metadata_update",
+    "unitycatalog.delta.models.delta_set_latest_backfilled_version_update",
+    "unitycatalog.delta.models.delta_set_partition_columns_update",
+    "unitycatalog.delta.models.delta_set_properties_update",
+    "unitycatalog.delta.models.delta_set_protocol_update",
+    "unitycatalog.delta.models.delta_set_schema_update",
+    "unitycatalog.delta.models.delta_set_table_comment_update",
+    "unitycatalog.delta.models.delta_staging_table_response",
+    "unitycatalog.delta.models.delta_staging_table_response_required_protocol",
+    "unitycatalog.delta.models.delta_staging_table_response_suggested_protocol",
+    "unitycatalog.delta.models.delta_storage_credential",
+    "unitycatalog.delta.models.delta_storage_credential_config",
+    "unitycatalog.delta.models.delta_struct_field",
+    "unitycatalog.delta.models.delta_struct_field_metadata",
+    "unitycatalog.delta.models.delta_struct_type",
+    "unitycatalog.delta.models.delta_table_metadata",
+    "unitycatalog.delta.models.delta_table_requirement",
+    "unitycatalog.delta.models.delta_table_type",
+    "unitycatalog.delta.models.delta_table_update",
+    "unitycatalog.delta.models.delta_uniform_metadata",
+    "unitycatalog.delta.models.delta_uniform_metadata_iceberg",
+    "unitycatalog.delta.models.delta_update_snapshot_version_update",
+    "unitycatalog.delta.models.delta_update_table_request",
+]
+universal-pathlib = ["upath"]
+unleashclient = ["UnleashClient"]
+unsloth = ["unsloth_cli"]
+urllib3-future = ["urllib3"]
+usaddress-scourgify = ["scourgify"]
+usd-core = ["pxr"]
+uuid7 = ["uuid_extensions"]
+vadersentiment = ["vaderSentiment"]
+valkey-glide = ["glide", "glide_shared"]
+vcrpy = ["vcr"]
+vercel-internal-core = ["vercel.api", "vercel.errors"]
+virtualenv-clone = ["clonevirtualenv"]
+vl-convert-python = ["vl_convert"]
+vtk = ["vtkmodules"]
+warp-lang = ["warp"]
+weaviate-client = ["weaviate"]
+web3 = ["ens"]
+webdavclient3 = ["webdav3"]
+webrtcvad-wheels = ["webrtcvad"]
+websocket-client = ["websocket"]
+webvtt-py = ["webvtt"]
+wikipedia-api = ["wikipediaapi"]
+xgboost-cpu = ["xgboost"]
+yaml-config = ["yamlconf"]
+yandexcloud = ["yandex"]
+yapf = ["yapf_third_party"]
+yara-python = ["yara"]
+ydata-profiling = ["pandas_profiling"]
+yoyo-migrations = ["yoyo"]
+ytsaurus-client = ["yt"]
+z3-solver = ["z3"]
+zen-engine = ["zen"]
+zipstream-ng = ["zipstream"]
+zxing-cpp = ["zxingcpp"]

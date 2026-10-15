@@ -29,7 +29,7 @@ Consequently, it is _likely_ that you will see false positives: packages flagged
 You will also see packages that are correctly flagged as never imported but still do something at runtime (e.g., database drivers selected via connection string); those are not detection errors, just an inherent limit of import-based analysis.
 Hopefully, both lists are small enough for this tool to be useful, and to be easy to manually audit.
 
-Additional name mappings can be added to [`src/name_map.rs`](src/name_map.rs) to improve accuracy.
+Additional name mappings can be added to [`src/name_map.toml`](src/name_map.toml) to improve accuracy.
 
 **Contents**
 
@@ -245,7 +245,7 @@ Notes from the audit, in the same order:
 
 - **pyproject-udeps** found all seven with no false positives.
   It correctly credits two `opentelemetry-*` packages that are [imported lazily inside function bodies](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/_internal/metrics.py#L79-L83) deep in `src/prefect/_internal/metrics.py`, a pattern that trips up several of the other tools.
-  Accuracy rests on two things: [`src/name_map.rs`](src/name_map.rs) is audited against the wheel contents of the 1,500 most-downloaded PyPI packages (see [contrib/name-map-audit](contrib/name-map-audit/)), and the matcher accepts any dotted prefix of an import path, so deep namespace imports find their package.
+  Accuracy rests on two things: [`src/name_map.toml`](src/name_map.toml) is audited against the wheel contents of the 5,000 most-downloaded PyPI packages (see [contrib/name-map-audit](contrib/name-map-audit/)), and the matcher accepts any dotted prefix of an import path, so deep namespace imports find their package.
   Expect the occasional false positive on packages the map does not know yet, and please send a PR when you hit one.
 - **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 16 packages with 7 false positives.
   In-venv it has no false positives, but it decides usage by mapping each dependency to the top-level modules its installed distribution claims, which makes namespace siblings indistinguishable.

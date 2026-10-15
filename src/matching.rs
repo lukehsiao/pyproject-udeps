@@ -1,14 +1,23 @@
 //! Matching imported modules against declared dependencies.
 //!
 //! This module hides the heuristics that bridge the gap between `PyPI`
-//! package names and Python module names: the curated [`KNOWN_NAMES`] map, the
-//! dash-to-underscore convention, and the namespace-package patterns
-//! (google-cloud-*, dbt adapters, sqlalchemy extensions).
+//! package names and Python module names: the curated [`KNOWN_MODULES`]
+//! map, the dash-to-underscore convention, and the namespace-package
+//! patterns (google-cloud-*, dbt adapters).
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::imports::Import;
-use crate::name_map::KNOWN_NAMES;
+
+/// The modules a package provides, for packages whose modules the naming
+/// convention in [`import_names_for`] cannot derive.
+///
+/// Keys are PEP 503 normalized package names, so look up the [`normalize`]d
+/// form. build.rs generates this map from `src/name_map.toml`, which
+/// documents the format.
+// phf_codegen writes its hash key as one long literal.
+#[expect(clippy::unreadable_literal)]
+static KNOWN_MODULES: phf::Map<&str, &[&str]> = include!(concat!(env!("OUT_DIR"), "/name_map.rs"));
 
 /// Tracks which declared dependencies have been seen in an import.
 ///
@@ -28,11 +37,8 @@ impl DependencyIndex {
         let mut keys: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let mut remaining = BTreeSet::new();
         for package in packages {
-            keys.entry(package.clone())
-                .or_default()
-                .insert(package.clone());
-            for alias in import_names_for(&package) {
-                keys.entry(alias).or_default().insert(package.clone());
+            for key in import_names_for(&package) {
+                keys.entry(key).or_default().insert(package.clone());
             }
             remaining.insert(package);
         }
@@ -84,57 +90,64 @@ fn normalize(package: &str) -> String {
     out
 }
 
-/// The import names a package is known or likely to use, when they differ
-/// from the package name itself.
-fn import_names_for(package: &str) -> Vec<String> {
+/// The match keys under which an import marks `package` as used: its own
+/// spellings, the module names the naming convention derives, and the
+/// modules [`KNOWN_MODULES`] lists for it.
+fn import_names_for(package: &str) -> BTreeSet<String> {
     let normalized = normalize(package);
-    let mut names = Vec::new();
-    if let Some(known) = KNOWN_NAMES.get(normalized.as_str()) {
-        names.push((*known).to_string());
-    }
+    let known = KNOWN_MODULES
+        .get(normalized.as_str())
+        .copied()
+        .unwrap_or_default();
+    // `candidate_keys` yields the dash-joined form of a module path for
+    // every import at or below it, so `a-b` matches `import a.b`,
+    // `import a.b.c`, `from a import b`, and `from a.b import c`.
+    let mut names: BTreeSet<String> = known
+        .iter()
+        .map(|module| module.replace('.', "-"))
+        .collect();
     // Modules conventionally swap dashes for underscores (python-dateutil is
     // an exception handled by the map). Lowercasing also lets a declared
     // "Flask" match `import flask` without a dedicated map entry.
-    let underscored = normalized.replace('-', "_");
-    if underscored != package {
-        names.push(underscored);
-    }
+    names.insert(normalized.replace('-', "_"));
+    // The dashed form matches namespace imports for any spelling, so a
+    // declared `Google_Auth` matches `import google.auth` as `google-auth`
+    // does.
+    names.insert(normalized);
+    // The declared spelling itself matches an import with the same case,
+    // such as `PySide6`.
+    names.insert(package.to_string());
     names
 }
 
 /// Package names an import could correspond to.
 fn candidate_keys(import: &Import) -> Vec<String> {
     let module = import.module.as_str();
+    // `from a.b import c` may import the module a.b.c, as in
+    // `from google.cloud import bigquery`, so the joins span the item too.
+    let parts: Vec<&str> = module.split('.').chain(import.item.as_deref()).collect();
     let mut candidates = Vec::new();
-
-    if let Some(item) = &import.item {
-        // Google-style namespace packages:
-        // `from google.cloud import bigquery` -> google-cloud-bigquery
-        candidates.push(format!("{}-{item}", module.replace('.', "-")));
-    }
-
-    let parts: Vec<&str> = module.split('.').collect();
 
     // DBT adapters: dbt.adapters.postgres -> dbt-postgres. A bare
     // `import dbt.adapters` has no adapter segment.
-    if module.starts_with("dbt.adapters") && parts.len() >= 3 {
-        candidates.push([parts[0], parts[2]].join("-"));
+    if let ["dbt", "adapters", adapter, ..] = parts[..] {
+        candidates.push(format!("dbt-{adapter}"));
     }
 
     // Every dotted-prefix join, so a deep import like
-    // `from airflow.providers.common.sql.hooks.sql import X` can match a
-    // package keyed as airflow-providers-common-sql, not just the full path
-    // (sqlalchemy.ext -> sqlalchemy-ext) or the two-level parent
-    // (`from google.auth.transport import requests` -> google-auth).
-    if parts.len() >= 2 {
-        for k in 2..=parts.len() {
-            candidates.push(parts[..k].join("-"));
-        }
-        // The top-level package: google.cloud -> google
-        candidates.push((*parts.first().expect("split is never empty")).to_string());
+    // `from airflow.providers.common.sql.hooks.sql import X` matches the
+    // airflow-providers-common-sql key, and
+    // `from google.auth.transport import requests` matches google-auth.
+    for k in 2..=parts.len() {
+        candidates.push(parts[..k].join("-"));
     }
-
-    candidates.push(module.to_string());
+    // The top-level package (google.cloud -> google), and the module as
+    // written, which a declared spelling such as `ruamel.yaml` matches. An
+    // undotted module is its own top-level package.
+    candidates.push(parts[0].to_string());
+    if module != parts[0] {
+        candidates.push(module.to_string());
+    }
     candidates
 }
 
@@ -169,7 +182,7 @@ mod test {
     }
 
     #[test]
-    fn known_names_alias_matches() {
+    fn known_module_matches() {
         let mut idx = index(&["scikit-learn"]);
         idx.mark_used(&plain("sklearn"));
         assert_eq!(idx.unused(), Vec::<String>::new());
@@ -200,9 +213,9 @@ mod test {
 
     #[test]
     fn deep_import_matches_intermediate_prefix_join() {
-        // The map points apache-airflow-providers-common-sql at the
-        // airflow-providers-common-sql join, which a deep import must
-        // produce even when the module path continues past it.
+        // The map lists airflow.providers.common.sql for
+        // apache-airflow-providers-common-sql, and an import below that
+        // module must still match.
         let mut idx = index(&["apache-airflow-providers-common-sql"]);
         idx.mark_used(&from("airflow.providers.common.sql.hooks.sql", "X"));
         assert_eq!(idx.unused(), Vec::<String>::new());
@@ -212,6 +225,13 @@ mod test {
     fn dbt_adapter_import_matches() {
         let mut idx = index(&["dbt-postgres"]);
         idx.mark_used(&plain("dbt.adapters.postgres"));
+        assert_eq!(idx.unused(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn dbt_adapter_from_import_matches() {
+        let mut idx = index(&["dbt-postgres"]);
+        idx.mark_used(&from("dbt.adapters", "postgres"));
         assert_eq!(idx.unused(), Vec::<String>::new());
     }
 
@@ -271,21 +291,6 @@ mod properties {
     use hegel::generators;
     use pretty_assertions::assert_eq;
 
-    // Independent re-statement of the alias rule, kept deliberately simple so
-    // it can serve as an oracle for the index's bookkeeping.
-    fn key_set(package: &str) -> BTreeSet<String> {
-        let mut keys = BTreeSet::from([package.to_string()]);
-        let normalized = normalize(package);
-        if let Some(known) = crate::name_map::KNOWN_NAMES.get(normalized.as_str()) {
-            keys.insert((*known).to_string());
-        }
-        let underscored = normalized.replace('-', "_");
-        if underscored != package {
-            keys.insert(underscored);
-        }
-        keys
-    }
-
     #[hegel::composite]
     fn package_name(tc: &hegel::TestCase) -> String {
         tc.draw(generators::from_regex("[a-zA-Z0-9][a-zA-Z0-9._-]{0,12}").fullmatch(true))
@@ -306,16 +311,117 @@ mod properties {
         Import { module, item }
     }
 
-    // P6: a dependency that is imported under any of its derivable names is
-    // never reported unused.
+    /// An import at or below `module`: `import module`, `import module.x`,
+    /// `from module import x`, `from module.x import y`, or, for a dotted
+    /// module, `from parent import last`.
+    #[hegel::composite]
+    fn import_at_or_below(tc: &hegel::TestCase, module: String) -> Import {
+        let (module, item) = match tc.draw(generators::integers::<u8>().max_value(4)) {
+            0 => (module, None),
+            1 => (format!("{module}.{}", tc.draw(module_path())), None),
+            2 => (module, Some(tc.draw(identifier()))),
+            3 => (
+                format!("{module}.{}", tc.draw(module_path())),
+                Some(tc.draw(identifier())),
+            ),
+            _ => match module.rsplit_once('.') {
+                Some((parent, last)) => (parent.to_string(), Some(last.to_string())),
+                None => (module, None),
+            },
+        };
+        Import { module, item }
+    }
+
+    /// A declared spelling that PEP 503 normalizes to `segments.join("-")`:
+    /// the lowercase segments in random case, joined by runs of separators.
+    #[hegel::composite]
+    fn respelled(tc: &hegel::TestCase, segments: Vec<String>) -> String {
+        let mut spelling = String::new();
+        for (i, segment) in segments.iter().enumerate() {
+            if i > 0 {
+                spelling.push_str(&tc.draw(generators::from_regex("[-_.]{1,3}").fullmatch(true)));
+            }
+            for c in segment.chars() {
+                if tc.draw(generators::booleans()) {
+                    spelling.extend(c.to_uppercase());
+                } else {
+                    spelling.push(c);
+                }
+            }
+        }
+        spelling
+    }
+
+    // `import a.b.c` and `from a.b import c` mark the same packages, since
+    // either one may import the module a.b.c. A declared spelling with
+    // uppercase and dots, such as `A.B`, matches only `import A.B` as
+    // written, so the declared names here are lowercase.
     #[hegel::test]
-    fn declared_and_imported_is_never_reported(tc: TestCase) {
-        let package = tc.draw(package_name());
-        let mut idx = DependencyIndex::new([package.clone()]);
-        // Import it by any name the alias rule derives for it.
-        let by: Vec<String> = key_set(&package).into_iter().collect();
-        let module = tc.draw(generators::sampled_from(by));
-        idx.mark_used(&Import { module, item: None });
+    fn from_import_matches_like_dotted_import(tc: TestCase) {
+        // A tiny alphabet makes declared names and import paths collide.
+        let packages: Vec<String> = tc.draw(
+            generators::vecs(
+                generators::from_regex("(dbt-)?[ab]{1,2}([-_.][ab]{1,2})?").fullmatch(true),
+            )
+            .max_size(6),
+        );
+        let prefix = tc.draw(generators::sampled_from(vec![
+            vec![],
+            vec!["dbt", "adapters"],
+        ]));
+        let rest: Vec<String> = tc.draw(
+            generators::vecs(generators::from_regex("[ab]{1,2}").fullmatch(true))
+                .min_size(1)
+                .max_size(4),
+        );
+        let mut segments: Vec<String> = prefix.into_iter().map(str::to_string).collect();
+        segments.extend(rest);
+        tc.assume(segments.len() >= 2);
+        let (last, parent) = segments.split_last().expect("at least two segments");
+
+        let mut by_dotted = DependencyIndex::new(packages.iter().cloned());
+        by_dotted.mark_used(&Import {
+            module: segments.join("."),
+            item: None,
+        });
+        let mut by_from = DependencyIndex::new(packages);
+        by_from.mark_used(&Import {
+            module: parent.join("."),
+            item: Some(last.clone()),
+        });
+        assert_eq!(by_dotted.unused(), by_from.unused());
+    }
+
+    // A package is used when code imports the module its name spells, with
+    // dots or underscores between the name's segments, however the package
+    // is declared.
+    #[hegel::test]
+    fn conventional_import_marks_any_spelling_used(tc: TestCase) {
+        let segments: Vec<String> = tc.draw(
+            generators::vecs(generators::from_regex("[a-z][a-z0-9]{0,5}").fullmatch(true))
+                .min_size(1)
+                .max_size(3),
+        );
+        let separator = tc.draw(generators::sampled_from(vec![".", "_"]));
+        let module = segments.join(separator);
+        let mut idx = DependencyIndex::new([tc.draw(respelled(segments))]);
+        idx.mark_used(&tc.draw(import_at_or_below(module)));
+        assert_eq!(idx.unused(), Vec::<String>::new());
+    }
+
+    // A package in the map is used when code imports any module the map
+    // lists for it, or anything below that module, however the package is
+    // declared.
+    #[hegel::test]
+    fn known_module_import_marks_any_spelling_used(tc: TestCase) {
+        let i = tc.draw(generators::integers::<usize>().max_value(KNOWN_MODULES.len() - 1));
+        let (package, modules) = KNOWN_MODULES.entries().nth(i).expect("i is in range");
+        let segments = package.split('-').map(str::to_string).collect();
+        let module = tc
+            .draw(generators::sampled_from(modules.to_vec()))
+            .to_string();
+        let mut idx = DependencyIndex::new([tc.draw(respelled(segments))]);
+        idx.mark_used(&tc.draw(import_at_or_below(module)));
         assert_eq!(idx.unused(), Vec::<String>::new());
     }
 
@@ -372,8 +478,8 @@ mod properties {
         }
     }
 
-    // P9: no import, however malformed, can panic the index. This is the
-    // property that would have caught the dbt.adapters parts[2] panic.
+    // P9: no import, however malformed, can panic the index, including an
+    // import that stops short of the dbt adapter segment.
     #[hegel::test]
     fn marking_never_panics(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(generators::text()).max_size(5));
@@ -400,7 +506,7 @@ mod properties {
         fn model_mark(&mut self, import: &Import) {
             let candidates: BTreeSet<String> = candidate_keys(import).into_iter().collect();
             for package in &self.declared {
-                if !key_set(package).is_disjoint(&candidates) {
+                if !import_names_for(package).is_disjoint(&candidates) {
                     self.used.insert(package.clone());
                 }
             }
