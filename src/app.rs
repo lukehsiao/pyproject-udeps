@@ -2,15 +2,16 @@
 //! and the ignorefile into one analysis run.
 
 use std::collections::BTreeSet;
+use std::io;
 use std::path::Path;
 
-use anyhow::Result;
-use tracing::{debug, error, info};
+use anyhow::{Result, anyhow};
+use tracing::{debug, info};
 
 use crate::ignorefile;
 use crate::imports::extract_imports;
 use crate::infra::env::Env;
-use crate::infra::fs::{FileSystem, WalkFilters};
+use crate::infra::fs::FileSystem;
 use crate::infra::process::{CommandRunner, NullResponse};
 use crate::matching::{DependencyIndex, Scope};
 use crate::pyproject::Manifest;
@@ -71,13 +72,19 @@ impl App {
     /// Fails when pyproject.toml cannot be read or parsed, or when the
     /// virtualenv cannot be located with `Options::virtualenv` set.
     pub fn run(&self, options: &Options) -> Result<Vec<String>> {
-        let pyproject_path = Path::new("pyproject.toml");
-        if !self.fs.exists(pyproject_path) {
-            error!("pyproject.toml not found. Are you in the root directory of your project?");
-            // Just fall through, the read below raises the error for us.
-        }
-
-        let manifest = Manifest::parse(&self.fs.read_to_string_lossy(pyproject_path)?)?;
+        let source = self
+            .fs
+            .read_to_string_lossy(Path::new("pyproject.toml"))
+            .map_err(|err| {
+                if err.kind() == io::ErrorKind::NotFound {
+                    anyhow!(
+                        "pyproject.toml not found. Are you in the root directory of your project?"
+                    )
+                } else {
+                    anyhow!("cannot read pyproject.toml: {err}")
+                }
+            })?;
+        let manifest = Manifest::parse(&source)?;
         info!(?manifest);
         let ignored = if options.no_ignore {
             BTreeSet::new()
@@ -92,12 +99,9 @@ impl App {
         if options.virtualenv {
             let venv_path = venv::find_venv(&self.fs, &self.runner, &self.env, &manifest)?;
             info!("Reading files in venv: {}", venv_path.display());
-            walks.push(self.fs.walk_python_files(&venv_path, WalkFilters::None));
+            walks.push(self.fs.walk_venv(&venv_path));
         }
-        walks.push(
-            self.fs
-                .walk_python_files(Path::new("./"), WalkFilters::Standard),
-        );
+        walks.push(self.fs.walk_project());
 
         for files in walks {
             for file in files {
@@ -185,9 +189,19 @@ pytest = \"^8.0\"
     }
 
     #[test]
-    fn missing_pyproject_is_an_error() {
+    fn missing_pyproject_error_includes_the_hint() {
         let app = null_app(&[]);
-        assert!(app.run(&Options::default()).is_err());
+        let err = app.run(&Options::default()).unwrap_err().to_string();
+        assert!(err.contains("Are you in the root directory"), "{err}");
+    }
+
+    #[test]
+    fn in_project_virtualenv_is_not_walked_without_the_option() {
+        let app = null_app(&[
+            ("pyproject.toml", MANIFEST),
+            (".venv/lib/requests/__init__.py", "import requests\n"),
+        ]);
+        assert_eq!(app.run(&Options::default()).unwrap(), vec!["requests"]);
     }
 
     #[test]

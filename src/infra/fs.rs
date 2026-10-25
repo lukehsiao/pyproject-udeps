@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
 
@@ -18,13 +18,15 @@ pub struct PyFile {
     pub contents: String,
 }
 
-/// Which files a walk skips.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WalkFilters {
-    /// Respect gitignore files and skip hidden entries (project walks).
-    Standard,
-    /// Visit everything, including hidden directories like `.venv`.
-    None,
+/// What a walk visits.
+#[derive(Debug)]
+enum Walk {
+    /// The project in the current directory, skipping gitignored entries
+    /// and hidden directories such as `.venv`.
+    Project,
+    /// Everything under a virtualenv, where installed packages may sit in
+    /// ignored or hidden places.
+    Venv(PathBuf),
 }
 
 #[derive(Debug, Clone)]
@@ -48,9 +50,9 @@ impl FileSystem {
     /// A filesystem containing exactly the given files. Bare
     /// `create_null([])` is an empty filesystem.
     ///
-    /// The nulled walk sends every `.py`/`.pyi` file under the walk root and
-    /// deliberately does not emulate gitignore semantics; [`WalkFilters`]
-    /// behavior belongs to the real arm and its integration tests.
+    /// Relative paths are project files. A nulled project walk skips hidden
+    /// directories, as the real walk does, but it does not emulate
+    /// gitignore files.
     pub fn create_null(
         files: impl IntoIterator<Item = (impl Into<PathBuf>, impl Into<String>)>,
     ) -> Self {
@@ -99,22 +101,40 @@ impl FileSystem {
         }
     }
 
-    /// Walk `root` for Python files (`.py`/`.pyi`) in the background and
-    /// stream them to the returned receiver. Unreadable entries are logged
-    /// and skipped; the walk never fails a file into the caller.
+    /// Walk the project in the current directory for Python files
+    /// (`.py`/`.pyi`) in the background, skipping gitignored entries and
+    /// hidden directories. Unreadable entries are logged and skipped; the
+    /// walk never fails a file into the caller.
     #[must_use]
-    pub fn walk_python_files(&self, root: &Path, filters: WalkFilters) -> flume::Receiver<PyFile> {
+    pub fn walk_project(&self) -> flume::Receiver<PyFile> {
+        self.walk(Walk::Project)
+    }
+
+    /// Walk every Python file under the virtualenv at `venv` in the
+    /// background, like [`FileSystem::walk_project`] but skipping nothing.
+    #[must_use]
+    pub fn walk_venv(&self, venv: &Path) -> flume::Receiver<PyFile> {
+        self.walk(Walk::Venv(venv.to_path_buf()))
+    }
+
+    fn walk(&self, walk: Walk) -> flume::Receiver<PyFile> {
         // Bounded so walkers block instead of buffering a whole venv in
         // memory when the consumer is slower than the walk.
         let (tx, rx) = flume::bounded::<PyFile>(100);
         match &self.inner {
-            Inner::Real => spawn_real_walk(root.to_path_buf(), filters, tx),
+            Inner::Real => match walk {
+                Walk::Project => spawn_real_walk(PathBuf::from("."), true, tx),
+                Walk::Venv(venv) => spawn_real_walk(venv, false, tx),
+            },
             Inner::Null(files) => {
                 let files = Arc::clone(files);
-                let root = root.to_path_buf();
                 thread::spawn(move || {
                     for (path, contents) in files.iter() {
-                        if under_root(path, &root) && is_python_file(path) {
+                        let walked = match &walk {
+                            Walk::Project => path.is_relative() && !in_hidden_dir(path),
+                            Walk::Venv(venv) => path.starts_with(venv),
+                        };
+                        if walked && is_python_file(path) {
                             let file = PyFile {
                                 path: path.clone(),
                                 contents: contents.clone(),
@@ -131,13 +151,18 @@ impl FileSystem {
     }
 }
 
-/// A nulled walk from `.` or `./` matches every relative path, mirroring how
-/// a real walk of the current directory sees any relative file.
-fn under_root(path: &Path, root: &Path) -> bool {
-    if root == Path::new(".") || root == Path::new("./") {
-        return path.is_relative();
-    }
-    path.starts_with(root)
+/// Whether `path` sits under a hidden, dot-prefixed directory.
+///
+/// The real walk skips hidden directories but still sends a hidden `.py`
+/// file, because the ignore crate lets the Python type filter override
+/// its hidden filter for files.
+fn in_hidden_dir(path: &Path) -> bool {
+    path.parent().is_some_and(|dir| {
+        dir.components().any(|component| match component {
+            Component::Normal(name) => name.as_encoded_bytes().starts_with(b"."),
+            _ => false,
+        })
+    })
 }
 
 fn is_python_file(path: &Path) -> bool {
@@ -145,7 +170,10 @@ fn is_python_file(path: &Path) -> bool {
         .is_some_and(|ext| ext == "py" || ext == "pyi")
 }
 
-fn spawn_real_walk(root: PathBuf, filters: WalkFilters, tx: flume::Sender<PyFile>) {
+/// Walk `root` with the real filesystem. `standard_filters` skips
+/// gitignored entries and hidden directories. The Python type filter
+/// still lets hidden `.py` files through.
+fn spawn_real_walk(root: PathBuf, standard_filters: bool, tx: flume::Sender<PyFile>) {
     thread::spawn(move || {
         let types = match TypesBuilder::new().add_defaults().select("py").build() {
             Ok(types) => types,
@@ -155,7 +183,7 @@ fn spawn_real_walk(root: PathBuf, filters: WalkFilters, tx: flume::Sender<PyFile
             }
         };
         let walker = WalkBuilder::new(root)
-            .standard_filters(matches!(filters, WalkFilters::Standard))
+            .standard_filters(standard_filters)
             .types(types)
             .build_parallel();
         walker.run(|| {
@@ -206,25 +234,40 @@ mod test {
     }
 
     #[test]
-    fn nulled_walk_sends_python_files_under_root() {
+    fn nulled_project_walk_skips_hidden_dirs() {
         let fs = FileSystem::create_null([
             ("main.py", "import os\n"),
             ("pkg/util.pyi", ""),
             ("README.md", "not python"),
+            (".venv/lib/site.py", ""),
+            ("pkg/.hidden.py", ""),
             ("/elsewhere/other.py", ""),
         ]);
-        let paths = collect_sorted(&fs.walk_python_files(Path::new("."), WalkFilters::Standard));
         assert_eq!(
-            paths,
-            vec![PathBuf::from("main.py"), PathBuf::from("pkg/util.pyi")]
+            collect_sorted(&fs.walk_project()),
+            vec![
+                PathBuf::from("main.py"),
+                PathBuf::from("pkg/.hidden.py"),
+                PathBuf::from("pkg/util.pyi"),
+            ]
         );
     }
 
     #[test]
-    fn nulled_walk_scopes_to_the_given_root() {
-        let fs = FileSystem::create_null([("/venv/lib/site.py", ""), ("/project/main.py", "")]);
-        let paths = collect_sorted(&fs.walk_python_files(Path::new("/venv"), WalkFilters::None));
-        assert_eq!(paths, vec![PathBuf::from("/venv/lib/site.py")]);
+    fn nulled_venv_walk_sends_everything_under_the_venv() {
+        let fs = FileSystem::create_null([
+            (".venv/lib/site.py", ""),
+            ("/venv/lib/.hidden/site.py", ""),
+            ("main.py", ""),
+        ]);
+        assert_eq!(
+            collect_sorted(&fs.walk_venv(Path::new(".venv"))),
+            vec![PathBuf::from(".venv/lib/site.py")]
+        );
+        assert_eq!(
+            collect_sorted(&fs.walk_venv(Path::new("/venv"))),
+            vec![PathBuf::from("/venv/lib/.hidden/site.py")]
+        );
     }
 
     #[test]
@@ -252,7 +295,7 @@ mod test {
     }
 
     // Narrow integration tests: document the real walk behavior the nulled
-    // walk deliberately does not emulate.
+    // walk mirrors, and the gitignore handling it does not.
 
     fn tempdir_with(files: &[(&str, &[u8])]) -> tempfile::TempDir {
         let dir = tempfile::TempDir::new().unwrap();
@@ -265,33 +308,43 @@ mod test {
     }
 
     #[test]
-    fn real_walk_respects_gitignore_under_standard_filters() {
+    fn real_project_walk_skips_gitignored_entries_and_hidden_dirs() {
         let dir = tempdir_with(&[
             (".gitignore", b"ignored/\n"),
             ("kept.py", b"import os\n"),
             ("stub.pyi", b""),
             ("ignored/skipped.py", b"import sys\n"),
+            (".venv/lib/site.py", b""),
+            ("pkg/.hidden.py", b""),
             ("notes.txt", b"not python"),
         ]);
         // The ignore crate only respects .gitignore inside a git repository.
         std::fs::create_dir(dir.path().join(".git")).unwrap();
-        let fs = FileSystem::create();
-        let paths = collect_sorted(&fs.walk_python_files(dir.path(), WalkFilters::Standard));
+        // The project walk always starts at the current directory, so walk
+        // the temporary directory through the shared real walk instead.
+        let (tx, rx) = flume::unbounded();
+        spawn_real_walk(dir.path().to_path_buf(), true, tx);
+        let paths = collect_sorted(&rx);
         assert_eq!(
             paths,
-            vec![dir.path().join("kept.py"), dir.path().join("stub.pyi")]
+            vec![
+                dir.path().join("kept.py"),
+                dir.path().join("pkg/.hidden.py"),
+                dir.path().join("stub.pyi"),
+            ]
         );
     }
 
     #[test]
-    fn real_walk_with_no_filters_visits_hidden_and_ignored_files() {
+    fn real_venv_walk_visits_hidden_and_ignored_files() {
         let dir = tempdir_with(&[
             (".gitignore", b"ignored/\n"),
             ("ignored/skipped.py", b"import sys\n"),
             (".venv/lib/site.py", b""),
         ]);
+        std::fs::create_dir(dir.path().join(".git")).unwrap();
         let fs = FileSystem::create();
-        let paths = collect_sorted(&fs.walk_python_files(dir.path(), WalkFilters::None));
+        let paths = collect_sorted(&fs.walk_venv(dir.path()));
         assert_eq!(
             paths,
             vec![
@@ -305,10 +358,7 @@ mod test {
     fn real_walk_reads_non_utf8_files_lossily() {
         let dir = tempdir_with(&[("legacy.py", b"import os\n\xff\xfe\n" as &[u8])]);
         let fs = FileSystem::create();
-        let files: Vec<PyFile> = fs
-            .walk_python_files(dir.path(), WalkFilters::Standard)
-            .iter()
-            .collect();
+        let files: Vec<PyFile> = fs.walk_venv(dir.path()).iter().collect();
         assert_eq!(files.len(), 1);
         assert!(files[0].contents.starts_with("import os\n"));
     }
