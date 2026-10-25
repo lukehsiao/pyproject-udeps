@@ -1,4 +1,5 @@
-use anyhow::Result;
+use std::io::Write;
+
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 
@@ -53,13 +54,127 @@ impl From<&Cli> for Options {
     }
 }
 
-/// Analyze the project in the current directory and return the unused
-/// dependencies, sorted by package name.
+/// Analyze the project in the current directory, write the unused
+/// dependencies to `out` one per line, sorted by package name, and write
+/// any error to `err` with its causes.
 ///
-/// # Errors
-///
-/// Fails when pyproject.toml cannot be read or parsed, or when the
-/// virtualenv cannot be located with `--virtualenv`.
-pub fn run(cli: &Cli) -> Result<Vec<String>> {
-    App::create().run(&Options::from(cli))
+/// Returns the process exit code: 0 when no dependency is unused, 1 when
+/// some are, and 2 when the analysis fails.
+pub fn run(cli: &Cli, out: &mut impl Write, err: &mut impl Write) -> u8 {
+    run_with(&App::create(), cli, out, err)
+}
+
+fn run_with(app: &App, cli: &Cli, out: &mut impl Write, err: &mut impl Write) -> u8 {
+    let report = app.run(&Options::from(cli)).and_then(|udeps| {
+        for dep in &udeps {
+            writeln!(out, "{dep}")?;
+        }
+        Ok(udeps.is_empty())
+    });
+    match report {
+        Ok(true) => 0,
+        Ok(false) => 1,
+        Err(e) => {
+            // Nothing is left to report a failure to write the error to.
+            let _ = writeln!(err, "{e:#}");
+            2
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::app::NullConfig;
+    use crate::infra::process::{Answer, Execution};
+    use pretty_assertions::assert_eq;
+
+    const MANIFEST: &str = "\
+[tool.poetry.dependencies]
+zope = \"*\"
+requests = \"*\"
+";
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct Outcome {
+        code: u8,
+        out: String,
+        err: String,
+    }
+
+    fn outcome(code: u8, out: &str, err: &str) -> Outcome {
+        Outcome {
+            code,
+            out: out.to_owned(),
+            err: err.to_owned(),
+        }
+    }
+
+    fn run_args(args: &[&str], config: NullConfig) -> Outcome {
+        let cli = Cli::try_parse_from(["pyproject-udeps"].iter().chain(args)).unwrap();
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let code = run_with(&App::create_null(config), &cli, &mut out, &mut err);
+        Outcome {
+            code,
+            out: String::from_utf8(out).unwrap(),
+            err: String::from_utf8(err).unwrap(),
+        }
+    }
+
+    fn project(files: &[(&str, &str)]) -> NullConfig {
+        NullConfig {
+            files: files
+                .iter()
+                .map(|(path, contents)| ((*path).to_owned(), (*contents).to_owned()))
+                .collect(),
+            ..NullConfig::default()
+        }
+    }
+
+    #[test]
+    fn nothing_unused_exits_0_silently() {
+        let config = project(&[
+            ("pyproject.toml", MANIFEST),
+            ("main.py", "import requests, zope\n"),
+        ]);
+        assert_eq!(run_args(&[], config), outcome(0, "", ""));
+    }
+
+    #[test]
+    fn unused_dependencies_exit_1_one_per_line_sorted() {
+        let config = project(&[("pyproject.toml", MANIFEST), ("main.py", "import os\n")]);
+        assert_eq!(run_args(&[], config), outcome(1, "requests\nzope\n", ""));
+    }
+
+    #[test]
+    fn missing_pyproject_exits_2_with_the_hint() {
+        assert_eq!(
+            run_args(&[], project(&[])),
+            outcome(
+                2,
+                "",
+                "pyproject.toml not found. Are you in the root directory of your project?\n"
+            )
+        );
+    }
+
+    #[test]
+    fn errors_show_their_causes() {
+        let config = NullConfig {
+            commands: vec![(
+                Execution::new("poetry", &["env", "info", "-p"]),
+                Answer::stdout("/venvs/gone\n"),
+            )],
+            ..project(&[("pyproject.toml", MANIFEST), ("poetry.lock", "")])
+        };
+        assert_eq!(
+            run_args(&["-e"], config),
+            outcome(
+                2,
+                "",
+                "could not locate a virtualenv; install the project with `poetry install`: \
+                 /venvs/gone does not exist, and .venv does not exist\n"
+            )
+        );
+    }
 }

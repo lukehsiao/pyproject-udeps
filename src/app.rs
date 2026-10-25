@@ -217,23 +217,6 @@ pytest = \"^8.0\"
     }
 
     #[test]
-    fn venv_discovery_failure_is_an_error() {
-        let app = App::create_null(NullConfig {
-            files: vec![("pyproject.toml".into(), MANIFEST.into())],
-            commands: vec![(
-                Execution::new("poetry", &["env", "info", "-p"]),
-                Answer::exit(1).stderr("no venv"),
-            )],
-            ..NullConfig::default()
-        });
-        let options = Options {
-            virtualenv: true,
-            ..Options::default()
-        };
-        assert!(app.run(&options).is_err());
-    }
-
-    #[test]
     fn poetry_is_not_invoked_without_the_virtualenv_option() {
         let fs = FileSystem::create_null([
             ("pyproject.toml", MANIFEST),
