@@ -1,10 +1,13 @@
 //! Nullable wrapper over the filesystem: existence checks, lossy reads, and
 //! parallel walks for Python files.
 
+#[cfg(test)]
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::{Component, Path, PathBuf};
+use std::io;
+#[cfg(test)]
+use std::path::Component;
+use std::path::{Path, PathBuf};
+#[cfg(test)]
 use std::sync::Arc;
 use std::thread;
 
@@ -38,7 +41,8 @@ pub struct FileSystem {
 enum Inner {
     Real,
     /// In-memory file tree: path -> contents.
-    Null(Arc<BTreeMap<PathBuf, String>>),
+    #[cfg(test)]
+    Null(Arc<BTreeMap<PathBuf, Vec<u8>>>),
 }
 
 impl FileSystem {
@@ -47,29 +51,11 @@ impl FileSystem {
         FileSystem { inner: Inner::Real }
     }
 
-    /// A filesystem containing exactly the given files. Bare
-    /// `create_null([])` is an empty filesystem.
-    ///
-    /// Relative paths are project files. A nulled project walk skips hidden
-    /// directories, as the real walk does, but it does not emulate
-    /// gitignore files.
-    pub fn create_null(
-        files: impl IntoIterator<Item = (impl Into<PathBuf>, impl Into<String>)>,
-    ) -> Self {
-        FileSystem {
-            inner: Inner::Null(Arc::new(
-                files
-                    .into_iter()
-                    .map(|(path, contents)| (path.into(), contents.into()))
-                    .collect(),
-            )),
-        }
-    }
-
     #[must_use]
     pub fn exists(&self, path: &Path) -> bool {
         match &self.inner {
             Inner::Real => path.exists(),
+            #[cfg(test)]
             Inner::Null(files) => {
                 files.contains_key(path) || files.keys().any(|p| p.starts_with(path))
             }
@@ -82,13 +68,9 @@ impl FileSystem {
     ///
     /// Fails when the file cannot be opened or read.
     pub fn read_to_string_lossy(&self, path: &Path) -> io::Result<String> {
-        match &self.inner {
-            Inner::Real => {
-                let mut file = File::open(path)?;
-                let mut buf = Vec::new();
-                file.read_to_end(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf).into_owned())
-            }
+        let bytes = match &self.inner {
+            Inner::Real => std::fs::read(path)?,
+            #[cfg(test)]
             Inner::Null(files) => files.get(path).cloned().ok_or_else(|| {
                 io::Error::new(
                     io::ErrorKind::NotFound,
@@ -97,8 +79,9 @@ impl FileSystem {
                         path.display()
                     ),
                 )
-            }),
-        }
+            })?,
+        };
+        Ok(decode_lossy(bytes))
     }
 
     /// Walk the project in the current directory for Python files
@@ -126,6 +109,7 @@ impl FileSystem {
                 Walk::Project => spawn_real_walk(PathBuf::from("."), true, tx),
                 Walk::Venv(venv) => spawn_real_walk(venv, false, tx),
             },
+            #[cfg(test)]
             Inner::Null(files) => {
                 let files = Arc::clone(files);
                 thread::spawn(move || {
@@ -137,7 +121,7 @@ impl FileSystem {
                         if walked && is_python_file(path) {
                             let file = PyFile {
                                 path: path.clone(),
-                                contents: contents.clone(),
+                                contents: decode_lossy(contents.clone()),
                             };
                             if tx.send(file).is_err() {
                                 return;
@@ -156,6 +140,7 @@ impl FileSystem {
 /// The real walk skips hidden directories but still sends a hidden `.py`
 /// file, because the ignore crate lets the Python type filter override
 /// its hidden filter for files.
+#[cfg(test)]
 fn in_hidden_dir(path: &Path) -> bool {
     path.parent().is_some_and(|dir| {
         dir.components().any(|component| match component {
@@ -165,9 +150,17 @@ fn in_hidden_dir(path: &Path) -> bool {
     })
 }
 
+#[cfg(test)]
 fn is_python_file(path: &Path) -> bool {
     path.extension()
         .is_some_and(|ext| ext == "py" || ext == "pyi")
+}
+
+/// Decode file contents as UTF-8, replacing invalid bytes. Valid UTF-8, the
+/// common case, is reused without a copy.
+fn decode_lossy(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes)
+        .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned())
 }
 
 /// Walk `root` with the real filesystem. `standard_filters` skips
@@ -198,8 +191,8 @@ fn spawn_real_walk(root: PathBuf, standard_filters: bool, tx: flume::Sender<PyFi
                     return Continue;
                 }
                 let path = entry.into_path();
-                let contents = match read_lossy(&path) {
-                    Ok(contents) => contents,
+                let contents = match std::fs::read(&path) {
+                    Ok(bytes) => decode_lossy(bytes),
                     Err(err) => {
                         warn!(%err, path = %path.display(), "skipping unreadable file");
                         return Continue;
@@ -215,11 +208,26 @@ fn spawn_real_walk(root: PathBuf, standard_filters: bool, tx: flume::Sender<PyFi
     });
 }
 
-fn read_lossy(path: &Path) -> io::Result<String> {
-    let mut file = File::open(path)?;
-    let mut buf = Vec::new();
-    file.read_to_end(&mut buf)?;
-    Ok(String::from_utf8_lossy(&buf).into_owned())
+#[cfg(test)]
+impl FileSystem {
+    /// A filesystem containing exactly the given files. Bare
+    /// `create_null([])` is an empty filesystem.
+    ///
+    /// Relative paths are project files. A nulled project walk skips hidden
+    /// directories, as the real walk does, but it does not emulate
+    /// gitignore files.
+    pub fn create_null(
+        files: impl IntoIterator<Item = (impl Into<PathBuf>, impl Into<Vec<u8>>)>,
+    ) -> Self {
+        FileSystem {
+            inner: Inner::Null(Arc::new(
+                files
+                    .into_iter()
+                    .map(|(path, contents)| (path.into(), contents.into()))
+                    .collect(),
+            )),
+        }
+    }
 }
 
 #[cfg(test)]
