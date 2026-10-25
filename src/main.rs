@@ -1,9 +1,11 @@
+use std::io;
+use std::process::ExitCode;
+
 use clap::Parser;
 use pyproject_udeps::{Cli, run};
-use std::process;
 use tracing_log::AsTrace;
 
-fn main() {
+fn main() -> ExitCode {
     // The walk parses Python on threads from the ignore crate, which get
     // Rust's 2 MiB default stack. Deeply nested, valid Python overflows
     // that, so ask for the 8 MiB a Linux main thread gets, unless the user
@@ -20,19 +22,9 @@ fn main() {
         .with_max_level(cli.verbose.log_level_filter().as_trace())
         .init();
 
-    match run(&cli) {
-        Ok(deps) if deps.is_empty() => process::exit(0),
-        Ok(deps) => {
-            for dep in deps {
-                println!("{dep}");
-            }
-            process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("{e}");
-            process::exit(2)
-        }
-    }
+    // Locking stdout for the whole run would deadlock: the walk threads
+    // log to it too. Each write locks it briefly instead.
+    ExitCode::from(run(&cli, &mut io::stdout(), &mut io::stderr()))
 }
 
 #[cfg(test)]
