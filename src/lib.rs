@@ -7,6 +7,7 @@ mod ignorefile;
 mod imports;
 pub mod infra;
 mod matching;
+mod package;
 mod pyproject;
 #[cfg(test)]
 mod testgen;
