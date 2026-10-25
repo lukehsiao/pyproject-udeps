@@ -53,7 +53,7 @@ impl From<&Cli> for Options {
 }
 
 /// Analyze the project in the current directory and return the unused
-/// dependencies, sorted.
+/// dependencies, sorted by package name.
 ///
 /// # Errors
 ///

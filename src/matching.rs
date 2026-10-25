@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::imports::Import;
 use crate::package::PackageName;
+use crate::pyproject::{DeclaredDependency, Group};
 
 /// The modules a package provides, for packages whose modules the naming
 /// convention in [`import_names_for`] cannot derive.
@@ -19,65 +20,94 @@ use crate::package::PackageName;
 #[expect(clippy::unreadable_literal)]
 static KNOWN_MODULES: phf::Map<&str, &[&str]> = include!(concat!(env!("OUT_DIR"), "/name_map.rs"));
 
+/// Which unused dependencies to report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scope {
+    Main,
+    MainAndDev,
+}
+
 /// Tracks which declared dependencies have been seen in an import.
 ///
-/// Match keys are kept separate from the set of unmatched originals, so an
-/// alias colliding with another declared package's name cannot clobber it,
-/// and one key may satisfy several packages.
+/// Every declaration of one package collapses into a single entry, so a
+/// package is reported at most once. Match keys are kept separate from the
+/// unmatched entries, so an alias colliding with another declared
+/// package's name cannot clobber it, and one key may satisfy several
+/// packages.
 #[derive(Debug, Clone)]
 pub struct DependencyIndex {
-    /// Candidate match key -> original package names it satisfies.
-    keys: BTreeMap<String, BTreeSet<String>>,
-    /// Original package names not yet seen in any import.
-    remaining: BTreeSet<String>,
+    /// Candidate match key -> packages it satisfies.
+    keys: BTreeMap<String, BTreeSet<PackageName>>,
+    /// Packages not yet seen in any import, each with the declaration
+    /// to report it by.
+    remaining: BTreeMap<PackageName, DeclaredDependency>,
 }
 
 impl DependencyIndex {
-    pub fn new(packages: impl IntoIterator<Item = String>) -> Self {
-        let mut keys: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-        let mut remaining = BTreeSet::new();
-        for package in packages {
-            for key in import_names_for(&package) {
-                keys.entry(key).or_default().insert(package.clone());
+    /// Index every declaration whose package is not in `ignored`.
+    ///
+    /// A package declared more than once is a main dependency if any
+    /// declaration says so, and is reported by the spelling that sorts
+    /// first among the declarations of that group.
+    pub fn new<'a>(
+        declared: impl IntoIterator<Item = &'a DeclaredDependency>,
+        ignored: &BTreeSet<PackageName>,
+    ) -> Self {
+        let mut keys: BTreeMap<String, BTreeSet<PackageName>> = BTreeMap::new();
+        let mut remaining: BTreeMap<PackageName, DeclaredDependency> = BTreeMap::new();
+        for dep in declared {
+            if ignored.contains(dep.name()) {
+                continue;
             }
-            remaining.insert(package);
+            for key in import_names_for(dep) {
+                keys.entry(key).or_default().insert(dep.name().clone());
+            }
+            let kept = remaining
+                .entry(dep.name().clone())
+                .or_insert_with(|| dep.clone());
+            if (dep.group(), dep.spelling()) < (kept.group(), kept.spelling()) {
+                *kept = dep.clone();
+            }
         }
         DependencyIndex { keys, remaining }
     }
 
     /// Mark every dependency this import could refer to as used.
     ///
-    /// Returns the packages that were newly marked, for logging. Marking is
-    /// idempotent; an import that matches nothing returns an empty vec.
-    pub fn mark_used(&mut self, import: &Import) -> Vec<String> {
+    /// Returns the dependencies that were newly marked, for logging.
+    /// Marking is idempotent; an import that matches nothing returns an
+    /// empty vec.
+    pub fn mark_used(&mut self, import: &Import) -> Vec<DeclaredDependency> {
         let mut newly_used = Vec::new();
         for candidate in candidate_keys(import) {
             if let Some(packages) = self.keys.get(&candidate) {
-                for package in packages {
-                    if self.remaining.remove(package) {
-                        newly_used.push(package.clone());
-                    }
-                }
+                newly_used.extend(
+                    packages
+                        .iter()
+                        .filter_map(|name| self.remaining.remove(name)),
+                );
             }
         }
         newly_used
     }
 
-    /// Declared dependencies never seen in an import, sorted.
-    pub fn unused(&self) -> Vec<String> {
-        self.remaining.iter().cloned().collect()
+    /// The declared spellings of the unused dependencies in `scope`, sorted
+    /// by package name.
+    pub fn unused(&self, scope: Scope) -> Vec<String> {
+        self.remaining
+            .values()
+            .filter(|dep| scope == Scope::MainAndDev || dep.group() == Group::Main)
+            .map(|dep| dep.spelling().to_owned())
+            .collect()
     }
 }
 
-/// The match keys under which an import marks `package` as used: its own
-/// spellings, the module names the naming convention derives, and the
+/// The match keys under which an import marks `dep` as used: its declared
+/// spelling, the module names the naming convention derives, and the
 /// modules [`KNOWN_MODULES`] lists for it.
-fn import_names_for(package: &str) -> BTreeSet<String> {
-    let name = PackageName::new(package);
-    let known = KNOWN_MODULES
-        .get(name.as_str())
-        .copied()
-        .unwrap_or_default();
+fn import_names_for(dep: &DeclaredDependency) -> BTreeSet<String> {
+    let name = dep.name().as_str();
+    let known = KNOWN_MODULES.get(name).copied().unwrap_or_default();
     // `candidate_keys` yields the dash-joined form of a module path for
     // every import at or below it, so `a-b` matches `import a.b`,
     // `import a.b.c`, `from a import b`, and `from a.b import c`.
@@ -88,14 +118,14 @@ fn import_names_for(package: &str) -> BTreeSet<String> {
     // Modules conventionally swap dashes for underscores (python-dateutil is
     // an exception handled by the map). Lowercasing also lets a declared
     // "Flask" match `import flask` without a dedicated map entry.
-    names.insert(name.as_str().replace('-', "_"));
+    names.insert(name.replace('-', "_"));
     // The dashed form matches namespace imports for any spelling, so a
     // declared `Google_Auth` matches `import google.auth` as `google-auth`
     // does.
-    names.insert(name.as_str().to_owned());
+    names.insert(name.to_owned());
     // The declared spelling itself matches an import with the same case,
     // such as `PySide6`.
-    names.insert(package.to_string());
+    names.insert(dep.spelling().to_owned());
     names
 }
 
@@ -135,8 +165,26 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    fn declared(spellings: &[&str], group: Group) -> Vec<DeclaredDependency> {
+        spellings
+            .iter()
+            .map(|spelling| DeclaredDependency::new((*spelling).to_owned(), group))
+            .collect()
+    }
+
     fn index(packages: &[&str]) -> DependencyIndex {
-        DependencyIndex::new(packages.iter().map(ToString::to_string))
+        DependencyIndex::new(&declared(packages, Group::Main), &BTreeSet::new())
+    }
+
+    fn unused(idx: &DependencyIndex) -> Vec<String> {
+        idx.unused(Scope::MainAndDev)
+    }
+
+    fn mark(idx: &mut DependencyIndex, import: &Import) -> Vec<String> {
+        idx.mark_used(import)
+            .iter()
+            .map(|dep| dep.spelling().to_owned())
+            .collect()
     }
 
     fn plain(module: &str) -> Import {
@@ -156,29 +204,29 @@ mod test {
     #[test]
     fn exact_name_matches() {
         let mut idx = index(&["requests", "numpy"]);
-        assert_eq!(idx.mark_used(&plain("requests")), vec!["requests"]);
-        assert_eq!(idx.unused(), vec!["numpy"]);
+        assert_eq!(mark(&mut idx, &plain("requests")), vec!["requests"]);
+        assert_eq!(unused(&idx), vec!["numpy"]);
     }
 
     #[test]
     fn known_module_matches() {
         let mut idx = index(&["scikit-learn"]);
         idx.mark_used(&plain("sklearn"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dash_to_underscore_alias_matches() {
         let mut idx = index(&["typing-extensions"]);
         idx.mark_used(&plain("typing_extensions"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn google_style_from_import_matches() {
         let mut idx = index(&["google-cloud-bigquery"]);
         idx.mark_used(&from("google.cloud", "bigquery"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
@@ -187,7 +235,7 @@ mod test {
         idx.mark_used(&plain("flask"));
         idx.mark_used(&plain("yaml"));
         idx.mark_used(&plain("ruamel_yaml_clib"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
@@ -197,68 +245,105 @@ mod test {
         // module must still match.
         let mut idx = index(&["apache-airflow-providers-common-sql"]);
         idx.mark_used(&from("airflow.providers.common.sql.hooks.sql", "X"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dbt_adapter_import_matches() {
         let mut idx = index(&["dbt-postgres"]);
         idx.mark_used(&plain("dbt.adapters.postgres"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dbt_adapter_from_import_matches() {
         let mut idx = index(&["dbt-postgres"]);
         idx.mark_used(&from("dbt.adapters", "postgres"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn bare_dbt_adapters_import_matches_nothing() {
         let mut idx = index(&["dbt-postgres"]);
-        assert_eq!(idx.mark_used(&plain("dbt.adapters")), Vec::<String>::new());
-        assert_eq!(idx.unused(), vec!["dbt-postgres"]);
+        assert_eq!(mark(&mut idx, &plain("dbt.adapters")), Vec::<String>::new());
+        assert_eq!(unused(&idx), vec!["dbt-postgres"]);
     }
 
     #[test]
     fn dotted_join_matches_sqlalchemy_extensions() {
         let mut idx = index(&["sqlalchemy-ext"]);
         idx.mark_used(&plain("sqlalchemy.ext"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn first_two_segments_match() {
         let mut idx = index(&["google-auth"]);
         idx.mark_used(&from("google.auth.transport", "requests"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn top_level_segment_matches() {
         let mut idx = index(&["google"]);
         idx.mark_used(&plain("google.cloud"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     // Regression: an alias equal to another declared package's name used to
     // clobber that package's own entry, silently un-reporting it.
     #[test]
     fn alias_collision_with_declared_package_keeps_both() {
-        // `foo-bar` generates alias `foo_bar`, which is also declared.
-        let mut idx = index(&["foo-bar", "foo_bar"]);
-        assert_eq!(idx.unused(), vec!["foo-bar", "foo_bar"]);
-        // Importing foo_bar satisfies both: the exact name and the alias.
-        idx.mark_used(&plain("foo_bar"));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        // The map lists module `yaml` for pyyaml, and `yaml` is also a
+        // package of its own.
+        let mut idx = index(&["pyyaml", "yaml"]);
+        assert_eq!(unused(&idx), vec!["pyyaml", "yaml"]);
+        assert_eq!(mark(&mut idx, &plain("yaml")), vec!["pyyaml", "yaml"]);
     }
 
     #[test]
     fn marking_is_idempotent() {
         let mut idx = index(&["requests"]);
-        assert_eq!(idx.mark_used(&plain("requests")), vec!["requests"]);
-        assert_eq!(idx.mark_used(&plain("requests")), Vec::<String>::new());
+        assert_eq!(mark(&mut idx, &plain("requests")), vec!["requests"]);
+        assert_eq!(mark(&mut idx, &plain("requests")), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_package_declared_in_main_and_dev_is_one_main_dependency() {
+        let mut deps = declared(&["requests"], Group::Main);
+        deps.extend(declared(&["Requests", "pytest"], Group::Dev));
+        let idx = DependencyIndex::new(&deps, &BTreeSet::new());
+        assert_eq!(idx.unused(Scope::Main), vec!["requests"]);
+        assert_eq!(idx.unused(Scope::MainAndDev), vec!["pytest", "requests"]);
+    }
+
+    #[test]
+    fn report_is_sorted_by_package_name() {
+        let idx = index(&["Zope", "attrs", "PyYAML"]);
+        assert_eq!(unused(&idx), vec!["attrs", "PyYAML", "Zope"]);
+    }
+
+    #[test]
+    fn first_sorting_spelling_of_the_group_is_reported() {
+        let mut deps = declared(&["ruamel_yaml", "ruamel.yaml"], Group::Main);
+        deps.extend(declared(&["Ruamel-YAML"], Group::Dev));
+        let idx = DependencyIndex::new(&deps, &BTreeSet::new());
+        assert_eq!(unused(&idx), vec!["ruamel.yaml"]);
+    }
+
+    #[test]
+    fn any_declared_spelling_marks_the_package_used() {
+        let mut deps = declared(&["foo-bar"], Group::Main);
+        deps.extend(declared(&["Foo_Bar"], Group::Dev));
+        let mut idx = DependencyIndex::new(&deps, &BTreeSet::new());
+        assert_eq!(mark(&mut idx, &plain("Foo_Bar")), vec!["foo-bar"]);
+    }
+
+    #[test]
+    fn ignored_packages_are_never_reported() {
+        let ignored = BTreeSet::from([PackageName::new("pyyaml")]);
+        let idx = DependencyIndex::new(&declared(&["PyYAML", "requests"], Group::Main), &ignored);
+        assert_eq!(unused(&idx), vec!["requests"]);
     }
 }
 
@@ -269,6 +354,18 @@ mod properties {
     use hegel::TestCase;
     use hegel::generators;
     use pretty_assertions::assert_eq;
+
+    fn index_of(packages: &[String]) -> DependencyIndex {
+        let declared: Vec<DeclaredDependency> = packages
+            .iter()
+            .map(|spelling| DeclaredDependency::new(spelling.clone(), Group::Main))
+            .collect();
+        DependencyIndex::new(&declared, &BTreeSet::new())
+    }
+
+    fn all_unused(idx: &DependencyIndex) -> Vec<String> {
+        idx.unused(Scope::MainAndDev)
+    }
 
     #[hegel::composite]
     fn package_name(tc: &hegel::TestCase) -> String {
@@ -358,17 +455,17 @@ mod properties {
         tc.assume(segments.len() >= 2);
         let (last, parent) = segments.split_last().expect("at least two segments");
 
-        let mut by_dotted = DependencyIndex::new(packages.iter().cloned());
+        let mut by_dotted = index_of(&packages);
         by_dotted.mark_used(&Import {
             module: segments.join("."),
             item: None,
         });
-        let mut by_from = DependencyIndex::new(packages);
+        let mut by_from = index_of(&packages);
         by_from.mark_used(&Import {
             module: parent.join("."),
             item: Some(last.clone()),
         });
-        assert_eq!(by_dotted.unused(), by_from.unused());
+        assert_eq!(all_unused(&by_dotted), all_unused(&by_from));
     }
 
     // A package is used when code imports the module its name spells, with
@@ -383,9 +480,9 @@ mod properties {
         );
         let separator = tc.draw(generators::sampled_from(vec![".", "_"]));
         let module = segments.join(separator);
-        let mut idx = DependencyIndex::new([tc.draw(respelled(segments))]);
+        let mut idx = index_of(&[tc.draw(respelled(segments))]);
         idx.mark_used(&tc.draw(import_at_or_below(module)));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(all_unused(&idx), Vec::<String>::new());
     }
 
     // A package in the map is used when code imports any module the map
@@ -399,20 +496,21 @@ mod properties {
         let module = tc
             .draw(generators::sampled_from(modules.to_vec()))
             .to_string();
-        let mut idx = DependencyIndex::new([tc.draw(respelled(segments))]);
+        let mut idx = index_of(&[tc.draw(respelled(segments))]);
         idx.mark_used(&tc.draw(import_at_or_below(module)));
-        assert_eq!(idx.unused(), Vec::<String>::new());
+        assert_eq!(all_unused(&idx), Vec::<String>::new());
     }
 
     // P7: imports drawn from a disjoint alphabet can never satisfy any
-    // declared dependency, so everything is reported.
+    // declared dependency, so everything is reported. The names are
+    // already normalized, so each one is its own package.
     #[hegel::test]
     fn never_imported_is_always_reported(tc: TestCase) {
         let packages: Vec<String> = tc.draw(
-            generators::vecs(generators::from_regex("aa[a-z0-9-]{0,10}").fullmatch(true))
+            generators::vecs(generators::from_regex("aa[a-z0-9]{0,10}").fullmatch(true))
                 .max_size(8),
         );
-        let mut idx = DependencyIndex::new(packages.iter().cloned());
+        let mut idx = index_of(&packages);
         let imports: Vec<String> = tc.draw(
             generators::vecs(
                 generators::from_regex("zz[a-z]{1,8}(\\.zz[a-z]{1,8}){0,3}").fullmatch(true),
@@ -421,38 +519,42 @@ mod properties {
         );
         for module in imports {
             let marked = idx.mark_used(&Import { module, item: None });
-            assert_eq!(marked, Vec::<String>::new());
+            assert_eq!(marked, Vec::new());
         }
         let mut expected: Vec<String> = packages;
         expected.sort();
         expected.dedup();
-        assert_eq!(idx.unused(), expected);
+        assert_eq!(all_unused(&idx), expected);
     }
 
     // P8: marking is idempotent and monotone, and unused() is always a
-    // sorted, deduplicated subset of the declared packages.
+    // subset of the declared spellings, sorted by distinct package names.
     #[hegel::test]
     fn marking_is_idempotent_and_monotone(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(package_name()).max_size(8));
         let declared: BTreeSet<String> = packages.iter().cloned().collect();
-        let mut idx = DependencyIndex::new(packages);
+        let mut idx = index_of(&packages);
 
         let steps = tc.draw(generators::integers::<usize>().min_value(0).max_value(10));
         for _ in 0..steps {
             let import = tc.draw(arbitrary_import());
-            let before = idx.unused();
+            let before = all_unused(&idx);
             let first = idx.mark_used(&import);
-            let after_once = idx.unused();
+            let after_once = all_unused(&idx);
             let second = idx.mark_used(&import);
-            assert_eq!(second, Vec::<String>::new(), "second mark must be a no-op");
-            assert_eq!(idx.unused(), after_once);
+            assert_eq!(second, Vec::new(), "second mark must be a no-op");
+            assert_eq!(all_unused(&idx), after_once);
 
-            // Monotone: unused only shrinks, by exactly the marked names.
+            // Monotone: unused only shrinks, by exactly the marked packages.
             assert!(after_once.iter().all(|p| before.contains(p)));
             assert_eq!(after_once.len() + first.len(), before.len());
 
-            // Always sorted, deduplicated, and a subset of declared.
-            assert!(after_once.windows(2).all(|w| w[0] < w[1]));
+            // Always sorted by distinct package names, and declared.
+            assert!(
+                after_once
+                    .windows(2)
+                    .all(|w| PackageName::new(&w[0]) < PackageName::new(&w[1]))
+            );
             assert!(after_once.iter().all(|p| declared.contains(p)));
         }
     }
@@ -462,7 +564,7 @@ mod properties {
     #[hegel::test]
     fn marking_never_panics(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(generators::text()).max_size(5));
-        let mut idx = DependencyIndex::new(packages);
+        let mut idx = index_of(&packages);
         let module = tc.draw(generators::text());
         let item = if tc.draw(generators::booleans()) {
             Some(tc.draw(generators::text()))
@@ -470,23 +572,23 @@ mod properties {
             None
         };
         idx.mark_used(&Import { module, item });
-        idx.unused();
+        idx.unused(Scope::MainAndDev);
     }
 
     // P10: the index agrees with a naive reference model under any sequence
     // of operations.
     struct IndexVsModel {
         idx: DependencyIndex,
-        declared: Vec<String>,
-        used: BTreeSet<String>,
+        declared: Vec<DeclaredDependency>,
+        used: BTreeSet<PackageName>,
     }
 
     impl IndexVsModel {
         fn model_mark(&mut self, import: &Import) {
             let candidates: BTreeSet<String> = candidate_keys(import).into_iter().collect();
-            for package in &self.declared {
-                if !import_names_for(package).is_disjoint(&candidates) {
-                    self.used.insert(package.clone());
+            for dep in &self.declared {
+                if !import_names_for(dep).is_disjoint(&candidates) {
+                    self.used.insert(dep.name().clone());
                 }
             }
         }
@@ -509,7 +611,7 @@ mod properties {
             tc.assume(!self.declared.is_empty());
             let package = tc.draw(generators::sampled_from(self.declared.clone()));
             let import = Import {
-                module: package,
+                module: package.spelling().to_owned(),
                 item: None,
             };
             self.idx.mark_used(&import);
@@ -518,15 +620,18 @@ mod properties {
 
         #[invariant]
         fn agrees_with_model(&mut self, _: TestCase) {
-            let expected: Vec<String> = self
+            // Each unused package, by the smallest of its spellings.
+            let mut expected: BTreeMap<&PackageName, &str> = BTreeMap::new();
+            for dep in self
                 .declared
                 .iter()
-                .filter(|p| !self.used.contains(*p))
-                .cloned()
-                .collect::<BTreeSet<String>>()
-                .into_iter()
-                .collect();
-            assert_eq!(self.idx.unused(), expected);
+                .filter(|dep| !self.used.contains(dep.name()))
+            {
+                let spelling = expected.entry(dep.name()).or_insert(dep.spelling());
+                *spelling = (*spelling).min(dep.spelling());
+            }
+            let expected: Vec<&str> = expected.into_values().collect();
+            assert_eq!(all_unused(&self.idx), expected);
         }
     }
 
@@ -534,8 +639,11 @@ mod properties {
     fn index_matches_reference_model(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(package_name()).max_size(8));
         let machine = IndexVsModel {
-            idx: DependencyIndex::new(packages.iter().cloned()),
-            declared: packages,
+            idx: index_of(&packages),
+            declared: packages
+                .into_iter()
+                .map(|spelling| DeclaredDependency::new(spelling, Group::Main))
+                .collect(),
             used: BTreeSet::new(),
         };
         hegel::stateful::machine(machine).run(tc);

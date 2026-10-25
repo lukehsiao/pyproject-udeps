@@ -1,6 +1,7 @@
 //! The application: wires manifest parsing, file walks, import matching,
 //! and the ignorefile into one analysis run.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use anyhow::Result;
@@ -11,8 +12,7 @@ use crate::imports::extract_imports;
 use crate::infra::env::Env;
 use crate::infra::fs::{FileSystem, WalkFilters};
 use crate::infra::process::{CommandRunner, NullResponse};
-use crate::matching::DependencyIndex;
-use crate::package::PackageName;
+use crate::matching::{DependencyIndex, Scope};
 use crate::pyproject::Manifest;
 use crate::venv;
 
@@ -63,8 +63,8 @@ impl App {
         }
     }
 
-    /// Analyze the project in the current directory and return the declared
-    /// dependencies never seen in an import, sorted.
+    /// Analyze the project in the current directory and return the unused
+    /// dependencies, sorted by package name.
     ///
     /// # Errors
     ///
@@ -79,8 +79,12 @@ impl App {
 
         let manifest = Manifest::parse(&self.fs.read_to_string_lossy(pyproject_path)?)?;
         info!(?manifest);
-        let mut main_deps = DependencyIndex::new(manifest.main_dependencies().map(str::to_owned));
-        let mut dev_deps = DependencyIndex::new(manifest.dev_dependencies().map(str::to_owned));
+        let ignored = if options.no_ignore {
+            BTreeSet::new()
+        } else {
+            ignorefile::ignored_packages(&self.fs)
+        };
+        let mut index = DependencyIndex::new(manifest.dependencies(), &ignored);
 
         // The walks stream files from background threads while this thread
         // extracts imports and matches them.
@@ -104,25 +108,23 @@ impl App {
                         path = %file.path.display(),
                         "Checking import",
                     );
-                    for found in main_deps.mark_used(&import) {
-                        info!(found, path = %file.path.display());
-                    }
-                    for found in dev_deps.mark_used(&import) {
-                        info!(found, path = %file.path.display(), dev = true);
+                    for found in index.mark_used(&import) {
+                        info!(
+                            found = found.spelling(),
+                            group = ?found.group(),
+                            path = %file.path.display(),
+                        );
                     }
                 }
             }
         }
 
-        let mut udeps = main_deps.unused();
-        if options.dev {
-            udeps.extend(dev_deps.unused());
-        }
-        if !options.no_ignore {
-            let ignored = ignorefile::ignored_packages(&self.fs);
-            udeps.retain(|dep| !ignored.contains(&PackageName::new(dep)));
-        }
-        Ok(udeps)
+        let scope = if options.dev {
+            Scope::MainAndDev
+        } else {
+            Scope::Main
+        };
+        Ok(index.unused(scope))
     }
 }
 
@@ -284,20 +286,22 @@ pytest = \"^8.0\"
 #[cfg(test)]
 mod properties {
     use super::*;
+    use crate::package::PackageName;
     use crate::testgen::identifier;
     use hegel::generators;
     use pretty_assertions::assert_eq;
-    use std::collections::BTreeSet;
     use std::fmt::Write;
 
     // P12: for any set of declared dependencies and any imported subset, the
-    // app reports exactly the difference, sorted.
+    // app reports exactly the difference, sorted by package name.
     #[hegel::test]
     fn reports_exactly_the_unimported_dependencies(tc: hegel::TestCase) {
         // Identifier-shaped package names import under their own name, so
         // the reference expectation needs no alias knowledge.
         let declared: Vec<String> =
             tc.draw(generators::vecs(identifier()).unique(true).max_size(8));
+        let names: BTreeSet<PackageName> = declared.iter().map(|p| PackageName::new(p)).collect();
+        tc.assume(names.len() == declared.len());
         let imported: BTreeSet<String> = declared
             .iter()
             .filter(|_| tc.draw(generators::booleans()))
@@ -321,13 +325,11 @@ mod properties {
             ..NullConfig::default()
         });
 
-        let expected: Vec<String> = declared
-            .iter()
-            .filter(|p| !imported.contains(*p))
-            .cloned()
-            .collect::<BTreeSet<String>>()
+        let mut expected: Vec<String> = declared
             .into_iter()
+            .filter(|p| !imported.contains(p))
             .collect();
+        expected.sort_by_key(|p| PackageName::new(p));
         assert_eq!(app.run(&Options::default()).unwrap(), expected);
     }
 }

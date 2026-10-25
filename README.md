@@ -97,7 +97,7 @@ jobs:
         run: pyproject-udeps
 ```
 
-The step fails (exit code 1) when unused dependencies are found and prints them one per line.
+The step fails (exit code 1) when unused dependencies are found and prints them one per line, sorted by package name.
 
 ## Usage
 
