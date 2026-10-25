@@ -132,7 +132,7 @@ version = "0.1.0"
 dependencies = ["requests>=2.31", "numpy"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "Requests"]
 "#,
         ),
         ("main.py", "import numpy\n"),
@@ -146,7 +146,7 @@ dev = ["pytest>=8"]
         .arg("--dev")
         .assert()
         .code(1)
-        .stdout("requests\npytest\n");
+        .stdout("pytest\nrequests\n");
 }
 
 #[test]

@@ -1,7 +1,7 @@
 //! Declared-dependency extraction from pyproject.toml.
 //!
 //! This module hides the zoo of places dependencies can be declared. Callers
-//! see two flat name sets: main and dev.
+//! see one flat list of declarations, each a main or a dev dependency.
 
 use std::collections::BTreeSet;
 
@@ -9,11 +9,53 @@ use anyhow::{Result, bail};
 use toml::Value;
 use tracing::info;
 
-/// The declared dependencies of a project, by name.
+use crate::package::PackageName;
+
+/// Whether a declaration makes a package a main or a dev dependency.
+///
+/// `Main` orders first, so of two declarations of one package, the smaller
+/// group is the one the package belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Group {
+    Main,
+    Dev,
+}
+
+/// One declaration of a package, as written in the manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeclaredDependency {
+    name: PackageName,
+    spelling: String,
+    group: Group,
+}
+
+impl DeclaredDependency {
+    #[must_use]
+    pub fn new(spelling: String, group: Group) -> Self {
+        DeclaredDependency {
+            name: PackageName::new(&spelling),
+            spelling,
+            group,
+        }
+    }
+
+    pub fn name(&self) -> &PackageName {
+        &self.name
+    }
+
+    pub fn spelling(&self) -> &str {
+        &self.spelling
+    }
+
+    pub fn group(&self) -> Group {
+        self.group
+    }
+}
+
+/// The declared dependencies of a project.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
-    main: BTreeSet<String>,
-    dev: BTreeSet<String>,
+    dependencies: Vec<DeclaredDependency>,
     has_tool_poetry: bool,
     has_tool_uv: bool,
 }
@@ -90,20 +132,24 @@ impl Manifest {
             info!("no dev dependencies found in pyproject.toml");
         }
 
+        let main = without_python(main)
+            .into_iter()
+            .map(|spelling| DeclaredDependency::new(spelling, Group::Main));
+        let dev = without_python(dev)
+            .into_iter()
+            .map(|spelling| DeclaredDependency::new(spelling, Group::Dev));
         Ok(Manifest {
-            main: without_python(main),
-            dev: without_python(dev),
+            dependencies: main.chain(dev).collect(),
             has_tool_poetry: lookup_table(&value, &["tool", "poetry"]).is_some(),
             has_tool_uv: lookup_table(&value, &["tool", "uv"]).is_some(),
         })
     }
 
-    pub fn main_dependencies(&self) -> impl Iterator<Item = &str> + '_ {
-        self.main.iter().map(String::as_str)
-    }
-
-    pub fn dev_dependencies(&self) -> impl Iterator<Item = &str> + '_ {
-        self.dev.iter().map(String::as_str)
+    /// Every declaration, main ones first. A package declared in several
+    /// groups, or under several spellings, appears once per group and
+    /// spelling.
+    pub fn dependencies(&self) -> &[DeclaredDependency] {
+        &self.dependencies
     }
 
     /// The manifest has a `[tool.poetry]` table; consumed by venv discovery.
@@ -175,8 +221,13 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn names(manifest_deps: impl Iterator<Item = impl Into<String>>) -> Vec<String> {
-        manifest_deps.map(Into::into).collect()
+    pub(super) fn names(manifest: &Manifest, group: Group) -> Vec<&str> {
+        manifest
+            .dependencies()
+            .iter()
+            .filter(|dep| dep.group() == group)
+            .map(DeclaredDependency::spelling)
+            .collect()
     }
 
     #[test]
@@ -190,11 +241,8 @@ numpy = "^1.26"
 "#,
         )
         .unwrap();
-        assert_eq!(
-            names(manifest.main_dependencies()),
-            vec!["numpy", "requests"]
-        );
-        assert_eq!(names(manifest.dev_dependencies()), Vec::<String>::new());
+        assert_eq!(names(&manifest, Group::Main), vec!["numpy", "requests"]);
+        assert_eq!(names(&manifest, Group::Dev), Vec::<String>::new());
     }
 
     #[test]
@@ -212,7 +260,7 @@ dependencies = [
         )
         .unwrap();
         assert_eq!(
-            names(manifest.main_dependencies()),
+            names(&manifest, Group::Main),
             vec!["numpy", "python-dateutil", "requests"]
         );
     }
@@ -230,7 +278,7 @@ from-poetry = "^1.0"
         )
         .unwrap();
         assert_eq!(
-            names(manifest.main_dependencies()),
+            names(&manifest, Group::Main),
             vec!["from-poetry", "from-project"]
         );
     }
@@ -249,7 +297,7 @@ excel = ["openpyxl", "xlsxwriter"]
         )
         .unwrap();
         assert_eq!(
-            names(manifest.main_dependencies()),
+            names(&manifest, Group::Main),
             vec!["matplotlib", "openpyxl", "requests", "xlsxwriter"]
         );
     }
@@ -269,7 +317,7 @@ mkdocs = "^1.6"
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.dev_dependencies()), vec!["mkdocs", "pytest"]);
+        assert_eq!(names(&manifest, Group::Dev), vec!["mkdocs", "pytest"]);
     }
 
     #[test]
@@ -287,7 +335,7 @@ all = [{include-group = "test"}, {include-group = "lint"}]
         )
         .unwrap();
         assert_eq!(
-            names(manifest.dev_dependencies()),
+            names(&manifest, Group::Dev),
             vec!["coverage", "pytest", "ruff"]
         );
     }
@@ -305,7 +353,7 @@ b = [{include-group = "a"}, "ruff"]
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.dev_dependencies()), vec!["pytest", "ruff"]);
+        assert_eq!(names(&manifest, Group::Dev), vec!["pytest", "ruff"]);
     }
 
     #[test]
@@ -320,7 +368,7 @@ dev-dependencies = ["pytest>=8"]
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.dev_dependencies()), vec!["pytest"]);
+        assert_eq!(names(&manifest, Group::Dev), vec!["pytest"]);
     }
 
     #[test]
@@ -332,8 +380,8 @@ dev = ["pytest"]
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.main_dependencies()), Vec::<String>::new());
-        assert_eq!(names(manifest.dev_dependencies()), vec!["pytest"]);
+        assert_eq!(names(&manifest, Group::Main), Vec::<String>::new());
+        assert_eq!(names(&manifest, Group::Dev), vec!["pytest"]);
     }
 
     #[test]
@@ -358,7 +406,7 @@ pytest = "^8.0"
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.dev_dependencies()), vec!["pytest"]);
+        assert_eq!(names(&manifest, Group::Dev), vec!["pytest"]);
     }
 
     #[test]
@@ -374,7 +422,7 @@ mypy = "^1.10"
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.dev_dependencies()), vec!["mypy", "pytest"]);
+        assert_eq!(names(&manifest, Group::Dev), vec!["mypy", "pytest"]);
     }
 
     #[test]
@@ -386,7 +434,7 @@ python = "^3.11"
 "#,
         )
         .unwrap();
-        assert_eq!(names(manifest.main_dependencies()), Vec::<String>::new());
+        assert_eq!(names(&manifest, Group::Main), Vec::<String>::new());
     }
 
     #[test]
@@ -414,11 +462,11 @@ dev-dependencies = ["foxtrot"]
         )
         .unwrap();
         assert_eq!(
-            names(manifest.main_dependencies()),
+            names(&manifest, Group::Main),
             vec!["alpha", "bravo", "charlie"]
         );
         assert_eq!(
-            names(manifest.dev_dependencies()),
+            names(&manifest, Group::Dev),
             vec!["delta", "echo", "foxtrot"]
         );
     }
@@ -444,6 +492,7 @@ dev-dependencies = ["foxtrot"]
 
 #[cfg(test)]
 mod properties {
+    use super::test::names;
     use super::*;
     use crate::testgen::identifier;
     use hegel::generators;
@@ -496,8 +545,14 @@ mod properties {
         expected_dev.extend(pep735);
         expected_dev.remove("python");
 
-        let main: BTreeSet<String> = manifest.main_dependencies().map(str::to_owned).collect();
-        let dev: BTreeSet<String> = manifest.dev_dependencies().map(str::to_owned).collect();
+        let main: BTreeSet<String> = names(&manifest, Group::Main)
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        let dev: BTreeSet<String> = names(&manifest, Group::Dev)
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
         assert_eq!(main, expected_main);
         assert_eq!(dev, expected_dev);
     }
@@ -530,7 +585,10 @@ mod properties {
         expected.remove("python");
 
         let manifest = Manifest::parse(&source).unwrap();
-        let dev: BTreeSet<String> = manifest.dev_dependencies().map(str::to_owned).collect();
+        let dev: BTreeSet<String> = names(&manifest, Group::Dev)
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
         assert_eq!(dev, expected);
     }
 }
