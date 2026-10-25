@@ -1,14 +1,16 @@
-//! End-to-end tests of the CLI process contract: exit codes, stdout, and
-//! flag behavior. These pin observable behavior so refactors can prove they
-//! changed nothing (or exactly what they meant to).
+//! Smoke tests of the built binary on a real filesystem: the exit codes
+//! and output a shell sees, the process setup in `main`, and a real
+//! virtualenv walk. Behavior that needs neither the binary nor a real
+//! filesystem is tested in-process.
 
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use assert_cmd::Command;
 use tempfile::TempDir;
 
-fn write(root: &Path, rel: &str, contents: &str) {
+fn write(root: &Path, rel: &str, contents: &[u8]) {
     let path = root.join(rel);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).unwrap();
@@ -16,7 +18,7 @@ fn write(root: &Path, rel: &str, contents: &str) {
     fs::write(path, contents).unwrap();
 }
 
-fn project(files: &[(&str, &str)]) -> TempDir {
+fn project(files: &[(&str, &[u8])]) -> TempDir {
     let dir = TempDir::new().unwrap();
     for (rel, contents) in files {
         write(dir.path(), rel, contents);
@@ -30,278 +32,83 @@ fn cmd(dir: &TempDir) -> Command {
     cmd
 }
 
-const POETRY_MANIFEST: &str = r#"
+const MANIFEST: &[u8] = br#"
 [tool.poetry.dependencies]
 python = "^3.11"
+zulu = "^1.0"
 requests = "^2.31"
 "#;
 
 #[test]
-fn unused_dependency_is_reported_with_exit_code_1() {
+fn used_dependencies_exit_0_with_no_output() {
     let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import os\n"),
+        ("pyproject.toml", MANIFEST),
+        ("main.py", b"import requests, zulu\n"),
     ]);
-    cmd(&dir).assert().code(1).stdout("requests\n");
+    cmd(&dir).assert().code(0).stdout("").stderr("");
 }
 
 #[test]
-fn used_dependency_exits_0_with_no_output() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import requests\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
+fn unused_dependencies_exit_1_sorted_one_per_line() {
+    let dir = project(&[("pyproject.toml", MANIFEST), ("main.py", b"import os\n")]);
+    cmd(&dir).assert().code(1).stdout("requests\nzulu\n");
 }
 
 #[test]
-fn missing_pyproject_exits_2() {
+fn missing_pyproject_exits_2_with_an_error() {
     let dir = project(&[]);
-    let assert = cmd(&dir).assert().code(2);
-    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
-    assert!(!stderr.is_empty(), "expected an error on stderr");
+    let assert = cmd(&dir).assert().code(2).stdout("");
+    assert_ne!(assert.get_output().stderr, [] as [u8; 0]);
 }
 
 #[test]
-fn unused_deps_are_reported_sorted_one_per_line() {
-    let dir = project(&[
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-zulu = "^1.0"
-alpha = "^1.0"
-"#,
-        ),
-        ("main.py", "import os\n"),
-    ]);
-    cmd(&dir).assert().code(1).stdout("alpha\nzulu\n");
-}
-
-#[test]
-fn dev_dependencies_are_only_reported_with_dev_flag() {
-    let files = [
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-requests = "^2.31"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
-"#,
-        ),
-        ("main.py", "import requests\n"),
-    ];
-
-    let dir = project(&files);
+fn deeply_nested_python_is_parsed() {
+    // 3000 nested operators: valid Python that overflows a 2 MiB thread
+    // stack in the parser.
+    let source = format!("x = {}1\nimport requests, zulu\n", "not ".repeat(3000));
+    let dir = project(&[("pyproject.toml", MANIFEST), ("main.py", source.as_bytes())]);
     cmd(&dir).assert().code(0).stdout("");
-
-    let dir = project(&files);
-    cmd(&dir).arg("--dev").assert().code(1).stdout("pytest\n");
 }
 
 #[test]
-fn pep621_project_dependencies_are_parsed() {
-    let dir = project(&[
+fn verbose_logs_from_the_walk_threads_do_not_hang() {
+    // Each file with a syntax error logs from a walk thread at -vvv.
+    let names: Vec<String> = (0..50).map(|i| format!("broken{i}.py")).collect();
+    let mut files: Vec<(&str, &[u8])> = vec![("pyproject.toml", MANIFEST)];
+    files.extend(names.iter().map(|name| {
         (
-            "pyproject.toml",
-            r#"
-[project]
-name = "demo"
-version = "0.1.0"
-dependencies = ["requests>=2.31"]
-"#,
-        ),
-        ("main.py", "import os\n"),
-    ]);
-    cmd(&dir).assert().code(1).stdout("requests\n");
-}
-
-#[test]
-fn uv_style_project_reports_main_and_group_dependencies() {
-    let files = [
-        (
-            "pyproject.toml",
-            r#"
-[project]
-name = "demo"
-version = "0.1.0"
-dependencies = ["requests>=2.31", "numpy"]
-
-[dependency-groups]
-dev = ["pytest>=8", "Requests"]
-"#,
-        ),
-        ("main.py", "import numpy\n"),
-    ];
-
-    let dir = project(&files);
-    cmd(&dir).assert().code(1).stdout("requests\n");
-
+            name.as_str(),
+            b"import requests, zulu\ndef broken(:\n" as &[u8],
+        )
+    }));
     let dir = project(&files);
     cmd(&dir)
-        .arg("--dev")
+        .arg("-vvv")
+        .timeout(Duration::from_secs(30))
         .assert()
-        .code(1)
-        .stdout("pytest\nrequests\n");
+        .code(0);
 }
 
 #[test]
-fn uv_project_virtualenv_flag_walks_dot_venv() {
+fn virtualenv_flag_walks_a_uv_projects_dot_venv() {
     let dir = project(&[
         (
             "pyproject.toml",
-            r#"
+            br#"
 [project]
 name = "demo"
 version = "0.1.0"
 dependencies = ["requests>=2.31"]
 "#,
         ),
-        ("uv.lock", ""),
-        ("main.py", "import os\n"),
+        ("uv.lock", b""),
+        ("main.py", b"import os\n"),
         (
             ".venv/lib/python3.12/site-packages/othertool/util.py",
-            "import requests\n",
+            b"import requests\n",
         ),
     ]);
     // Without -e, requests looks unused; with -e, the venv walk finds it.
     cmd(&dir).assert().code(1).stdout("requests\n");
     cmd(&dir).arg("-e").assert().code(0).stdout("");
-}
-
-#[test]
-fn known_name_alias_marks_dependency_used() {
-    let dir = project(&[
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-scikit-learn = "^1.4"
-"#,
-        ),
-        ("main.py", "import sklearn\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn dash_to_underscore_alias_marks_dependency_used() {
-    let dir = project(&[
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-typing-extensions = "^4.12"
-"#,
-        ),
-        ("main.py", "import typing_extensions\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn aliased_dev_dependency_is_not_reported_when_used() {
-    let dir = project(&[
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-
-[tool.poetry.group.dev.dependencies]
-scikit-learn = "^1.4"
-"#,
-        ),
-        ("main.py", "import sklearn\n"),
-    ]);
-    cmd(&dir).arg("--dev").assert().code(0).stdout("");
-}
-
-#[test]
-fn bare_dbt_adapters_import_does_not_crash() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import dbt.adapters\n"),
-    ]);
-    cmd(&dir).assert().code(1).stdout("requests\n");
-}
-
-#[test]
-fn dbt_adapter_import_marks_adapter_package_used() {
-    let dir = project(&[
-        (
-            "pyproject.toml",
-            r#"
-[tool.poetry.dependencies]
-python = "^3.11"
-dbt-postgres = "^1.9"
-"#,
-        ),
-        ("main.py", "import dbt.adapters.postgres\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn non_utf8_python_file_does_not_crash() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import requests\n"),
-    ]);
-    fs::write(
-        dir.path().join("legacy.py"),
-        b"import os\n\xff\xfe garbage\n",
-    )
-    .unwrap();
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn ignorefile_filters_reported_dependencies() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import os\n"),
-        (".pyprojectudepsignore", "requests\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn legacy_ignorefile_name_still_works() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import os\n"),
-        (".poetryudepsignore", "requests\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn ignorefile_skips_comments_and_blank_lines() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import os\n"),
-        (".poetryudepsignore", "# a comment\n\nrequests\n"),
-    ]);
-    cmd(&dir).assert().code(0).stdout("");
-}
-
-#[test]
-fn no_ignore_flag_bypasses_the_ignorefile() {
-    let dir = project(&[
-        ("pyproject.toml", POETRY_MANIFEST),
-        ("main.py", "import os\n"),
-        (".poetryudepsignore", "requests\n"),
-    ]);
-    cmd(&dir)
-        .arg("--no-ignore")
-        .assert()
-        .code(1)
-        .stdout("requests\n");
 }

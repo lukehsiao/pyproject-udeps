@@ -14,9 +14,6 @@ use crate::package::PackageName;
 use crate::venv::Flavor;
 
 /// Whether a declaration makes a package a main or a dev dependency.
-///
-/// `Main` orders first, so of two declarations of one package, the smaller
-/// group is the one the package belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Group {
     Main,
