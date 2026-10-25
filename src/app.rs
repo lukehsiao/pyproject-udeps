@@ -100,7 +100,7 @@ impl App {
         // extracts imports and matches them.
         let mut walks = Vec::new();
         if options.virtualenv {
-            let venv_path = venv::find_venv(&self.fs, &self.runner, &self.env, &manifest)?;
+            let venv_path = venv::find_venv(&self.fs, &self.runner, &self.env, manifest.flavor())?;
             info!("Reading files in venv: {}", venv_path.display());
             walks.push(self.fs.walk_venv(&venv_path));
         }
