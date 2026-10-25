@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`a80581c`](https://github.com/lukehsiao/pyproject-udeps/commit/a80581c99074b0922c64b450a7df385fecbc7830) - **breaking**: the library's `app` and `infra` modules are now private, so only `Cli` and `run` remain public.
+  
+  The command-line tool is unchanged.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`4cc1577`](https://github.com/lukehsiao/pyproject-udeps/commit/4cc1577017312fd9bbb6f471d1b66b9d39f8c4d0) - **breaking**: the library's `run` now takes stdout and stderr writers, writes the report and any error itself, and returns the exit code.
+  
+  Command-line usage is not affected by this break.
+
+### Patch Changes
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`746db3e`](https://github.com/lukehsiao/pyproject-udeps/commit/746db3e9bb5f7b35af83fdbf4faf5a7f1070a68d) - **fix**: a dotted declared spelling with uppercase letters, such as `Acme.Widgets`, now matches `from Acme import Widgets` and imports below `Acme.Widgets`, not only `import Acme.Widgets`.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`4cc1577`](https://github.com/lukehsiao/pyproject-udeps/commit/4cc1577017312fd9bbb6f471d1b66b9d39f8c4d0) - **fix**: errors now include their causes, so a failed virtualenv lookup says why it failed, such as ``failed to run `poetry env info -p` ``.
+  
+  A broken stdout pipe, as in `pyproject-udeps | head -0`, now exits with code 2 and a one-line error, not a panic.
+
+- [`8b0f336`](https://github.com/lukehsiao/pyproject-udeps/commit/8b0f336f619834d03bc9e9a377529e5b027106ac) - **fix**: with `--virtualenv`, a package's imports of its own modules no longer mark it as used.
+  
+  Before, any installed package that imports itself, such as `graphviz` or `pydantic`, was never reported, even when nothing else used it.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`45a5562`](https://github.com/lukehsiao/pyproject-udeps/commit/45a55623ef7969491892c9f0800204c5758778b9) - **fix**: ignorefile entries now match a declared dependency in any spelling, so `pyyaml` hides a declared `PyYAML`.
+  
+  Whitespace around an entry is ignored.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`1f10fff`](https://github.com/lukehsiao/pyproject-udeps/commit/1f10fffb539c4343cacde120e33e1ae0c29f6fe6) - **fix**: a missing `pyproject.toml` now prints one error with the hint to run from the project root, instead of two separate messages.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`ae68ba7`](https://github.com/lukehsiao/pyproject-udeps/commit/ae68ba761d338119cc4f2ab89a12c0d024e60a3b) - **perf**: Python files are now parsed on one thread per CPU, up to 12, not on one thread, which makes a scan of the 6,281-file standard library about 7 times faster.
+  
+  With `--virtualenv`, the project and its virtualenv are now scanned at the same time.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`a74e6a5`](https://github.com/lukehsiao/pyproject-udeps/commit/a74e6a55b1580c43c732a0626997134b2a7a84e3) - **fix**: the Python interpreter requirement is never reported, however it is spelled, so `Python = "^3.11"` no longer shows up as an unused dependency.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`210518a`](https://github.com/lukehsiao/pyproject-udeps/commit/210518a2d40c56a1dcbcd51c482afc76f856e6af) - **fix**: each unused dependency is now reported once, and the report is sorted by package name.
+  
+  A package declared in both the main and dev dependencies counts as a main dependency, so `--dev` no longer prints it twice.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`3d1e3e2`](https://github.com/lukehsiao/pyproject-udeps/commit/3d1e3e2266467f9a77e0a508f8ad980d0f3b3397) - **fix**: upgrade `ruff_python_ast` and `ruff_python_parser` to 0.0.19.
+  
+  Import extraction is unchanged, and the minimum supported Rust version stays at 1.97.
+
+- [#41](https://github.com/lukehsiao/pyproject-udeps/pull/41) [`19df7a3`](https://github.com/lukehsiao/pyproject-udeps/commit/19df7a3b227b294d0dcd2b67ad5db105c0a85da7) - **fix**: with `--virtualenv`, a poetry virtualenv path that no longer exists now falls back to `.venv`, or fails with exit code 2.
+  
+  Before, the tool searched nothing and reported every dependency the virtualenv would have used.
+
+<pre>
+$ git-stats v0.3.11..v0.4.0
+Author      Commits  Changed Files  Insertions  Deletions  Net Δ
+Luke Hsiao       20             89       +2654      -1892   +762
+Total            20             89       +2654      -1892   +762
+</pre>
+
 ## 0.3.11
 
 ### Patch Changes
