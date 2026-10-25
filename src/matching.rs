@@ -532,7 +532,7 @@ mod properties {
         assert_eq!(all_unused(&idx), Vec::<String>::new());
     }
 
-    // P7: imports drawn from a disjoint alphabet can never satisfy any
+    // Imports drawn from a disjoint alphabet can never satisfy any
     // declared dependency, so everything is reported. The names are
     // already normalized, so each one is its own package.
     #[hegel::test]
@@ -558,7 +558,7 @@ mod properties {
         assert_eq!(all_unused(&idx), expected);
     }
 
-    // P8: marking is idempotent and monotone, and unused() is always a
+    // Marking is idempotent and monotone, and unused() is always a
     // subset of the declared spellings, sorted by distinct package names.
     #[hegel::test]
     fn marking_is_idempotent_and_monotone(tc: TestCase) {
@@ -590,7 +590,7 @@ mod properties {
         }
     }
 
-    // P9: no import, however malformed, can panic the index, including an
+    // No import, however malformed, can panic the index, including an
     // import that stops short of the dbt adapter segment.
     #[hegel::test]
     fn marking_never_panics(tc: TestCase) {
@@ -606,7 +606,7 @@ mod properties {
         idx.unused(Scope::MainAndDev);
     }
 
-    // P10: the index agrees with a reference model under any sequence of
+    // The index agrees with a reference model under any sequence of
     // operations. The model works on lists of path segments and never calls
     // the key functions, so it catches the two sides of a match disagreeing
     // about the key format.

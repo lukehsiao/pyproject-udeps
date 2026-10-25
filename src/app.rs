@@ -309,8 +309,8 @@ mod properties {
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
 
-    // P12: for any set of declared dependencies and any imported subset, the
-    // app reports exactly the difference, sorted by package name.
+    // For any set of declared dependencies and any imported subset, the app
+    // reports exactly the difference, sorted by package name.
     #[hegel::test]
     fn reports_exactly_the_unimported_dependencies(tc: hegel::TestCase) {
         // Identifier-shaped package names import under their own name, so
