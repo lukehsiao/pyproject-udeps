@@ -12,7 +12,9 @@ use crate::ignorefile;
 use crate::imports::extract_imports;
 use crate::infra::env::Env;
 use crate::infra::fs::FileSystem;
-use crate::infra::process::{CommandRunner, NullResponse};
+use crate::infra::process::CommandRunner;
+#[cfg(test)]
+use crate::infra::process::{Answer, Execution};
 use crate::matching::{DependencyIndex, Scope};
 use crate::pyproject::Manifest;
 use crate::venv;
@@ -35,12 +37,13 @@ pub struct App {
 }
 
 /// Configuration for a nulled [`App`], in each wrapper's own language.
+#[cfg(test)]
 #[derive(Default)]
 pub struct NullConfig {
     /// In-memory file tree; relative paths are files in the project.
     pub files: Vec<(String, String)>,
-    /// Rendered command line -> canned response.
-    pub commands: Vec<(String, NullResponse)>,
+    /// Commands and how each one finishes.
+    pub commands: Vec<(Execution, Answer)>,
     /// Environment variables.
     pub env: Vec<(String, String)>,
 }
@@ -55,7 +58,7 @@ impl App {
         }
     }
 
-    #[must_use]
+    #[cfg(test)]
     pub fn create_null(config: NullConfig) -> App {
         App {
             fs: FileSystem::create_null(config.files),
@@ -216,8 +219,8 @@ pytest = \"^8.0\"
                 ),
             ],
             commands: vec![(
-                "poetry env info -p".into(),
-                NullResponse::Stdout("/venvs/demo".into()),
+                Execution::new("poetry", &["env", "info", "-p"]),
+                Answer::stdout("/venvs/demo\n"),
             )],
             ..NullConfig::default()
         });
@@ -233,8 +236,8 @@ pytest = \"^8.0\"
         let app = App::create_null(NullConfig {
             files: vec![("pyproject.toml".into(), MANIFEST.into())],
             commands: vec![(
-                "poetry env info -p".into(),
-                NullResponse::Failure("no venv".into()),
+                Execution::new("poetry", &["env", "info", "-p"]),
+                Answer::exit(1).stderr("no venv"),
             )],
             ..NullConfig::default()
         });
@@ -251,7 +254,7 @@ pytest = \"^8.0\"
             ("pyproject.toml", MANIFEST),
             ("main.py", "import requests\n"),
         ]);
-        let runner = CommandRunner::create_null([] as [(&str, NullResponse); 0]);
+        let runner = CommandRunner::create_null([]);
         let runs = runner.track_runs();
         let app = App {
             fs,

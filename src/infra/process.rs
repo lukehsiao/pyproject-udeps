@@ -1,58 +1,73 @@
 //! Nullable wrapper over subprocess execution.
 
+#[cfg(test)]
 use std::collections::HashMap;
 use std::process::Command;
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 
-use crate::infra::util::{OutputListener, OutputTracker};
+use crate::infra::nullable::OutputListener;
+#[cfg(test)]
+use crate::infra::nullable::OutputTracker;
 
-/// One command invocation, in rendered form (e.g. `poetry env info -p`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One command invocation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Execution {
-    pub command: String,
+    pub program: String,
+    pub args: Vec<String>,
 }
 
-/// What a nulled runner answers for one command line.
-#[derive(Debug, Clone)]
-pub enum NullResponse {
-    /// Successful run with this stdout.
-    Stdout(String),
-    /// Failed run with this error message.
-    Failure(String),
+impl Execution {
+    #[must_use]
+    pub fn new(program: &str, args: &[&str]) -> Self {
+        Execution {
+            program: program.to_owned(),
+            args: args.iter().map(|&arg| arg.to_owned()).collect(),
+        }
+    }
+}
+
+/// What a finished command produced, before this wrapper reads it.
+///
+/// `std::process::ExitStatus` cannot be built portably, so the real and
+/// stubbed runs both reduce to this, and one code path interprets it.
+struct RawOutput {
+    /// How a failed run ended, as `ExitStatus` describes it, such as
+    /// `exit status: 1` or `signal: 9 (SIGKILL)`. `None` on success.
+    failure: Option<String>,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+impl From<std::process::Output> for RawOutput {
+    fn from(output: std::process::Output) -> Self {
+        RawOutput {
+            failure: (!output.status.success()).then(|| output.status.to_string()),
+            stdout: output.stdout,
+            stderr: output.stderr,
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct CommandRunner {
-    inner: Inner,
-    listener: OutputListener<Execution>,
+    runner: Runner,
+    runs: OutputListener<Execution>,
 }
 
 #[derive(Debug)]
-enum Inner {
+enum Runner {
     Real,
-    Null(HashMap<String, NullResponse>),
+    #[cfg(test)]
+    Stubbed(HashMap<Execution, Answer>),
 }
 
 impl CommandRunner {
     #[must_use]
     pub fn create() -> Self {
         CommandRunner {
-            inner: Inner::Real,
-            listener: OutputListener::new(),
-        }
-    }
-
-    /// A runner that answers only the configured command lines. Any other
-    /// command fails loudly, which is also the safe default world: a tool
-    /// that is not installed. Keys are rendered command lines, e.g.
-    /// `("poetry env info -p", NullResponse::Stdout("/venvs/x".into()))`.
-    pub fn create_null(
-        responses: impl IntoIterator<Item = (impl Into<String>, NullResponse)>,
-    ) -> Self {
-        CommandRunner {
-            inner: Inner::Null(responses.into_iter().map(|(k, v)| (k.into(), v)).collect()),
-            listener: OutputListener::new(),
+            runner: Runner::Real,
+            runs: OutputListener::default(),
         }
     }
 
@@ -63,40 +78,118 @@ impl CommandRunner {
     /// Fails when the command cannot be spawned or exits nonzero, with
     /// stderr in the error message.
     pub fn run(&self, program: &str, args: &[&str]) -> Result<String> {
-        let command = format!("{program} {}", args.join(" "));
-        self.listener.emit(Execution {
-            command: command.clone(),
-        });
-        match &self.inner {
-            Inner::Real => {
-                let output = Command::new(program)
-                    .args(args)
-                    .output()
-                    .with_context(|| format!("failed to run `{command}`"))?;
-                if !output.status.success() {
-                    bail!(
-                        "`{command}` failed ({}): {}",
-                        output.status,
-                        String::from_utf8_lossy(&output.stderr).trim()
-                    );
-                }
-                Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-            }
-            Inner::Null(responses) => match responses.get(&command) {
-                Some(NullResponse::Stdout(stdout)) => Ok(stdout.clone()),
-                Some(NullResponse::Failure(message)) => Err(anyhow!(
-                    "Nulled CommandRunner: configured failure for `{command}`: {message}"
-                )),
-                None => Err(anyhow!(
-                    "Nulled CommandRunner: no response configured for `{command}`"
-                )),
-            },
+        self.runs.emit(|| Execution::new(program, args));
+        let output = match &self.runner {
+            Runner::Real => Command::new(program)
+                .args(args)
+                .output()
+                .map(RawOutput::from),
+            #[cfg(test)]
+            Runner::Stubbed(answers) => stub::output(answers, program, args),
+        }
+        .with_context(|| format!("failed to run `{}`", command_line(program, args)))?;
+        if let Some(status) = output.failure {
+            bail!(
+                "`{}` failed ({status}): {}",
+                command_line(program, args),
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+    }
+}
+
+/// A command as a shell user would type it, for error messages.
+fn command_line(program: &str, args: &[&str]) -> String {
+    let mut line = program.to_owned();
+    for arg in args {
+        line.push(' ');
+        line.push_str(arg);
+    }
+    line
+}
+
+/// How a stubbed command finishes.
+#[cfg(test)]
+#[derive(Debug, Clone)]
+pub struct Answer {
+    code: i32,
+    stdout: String,
+    stderr: String,
+}
+
+#[cfg(test)]
+impl Answer {
+    /// A successful run that prints `stdout`.
+    pub fn stdout(stdout: &str) -> Self {
+        Answer {
+            code: 0,
+            stdout: stdout.to_owned(),
+            stderr: String::new(),
+        }
+    }
+
+    /// A run that exits with `code` and prints nothing.
+    pub fn exit(code: i32) -> Self {
+        Answer {
+            code,
+            stdout: String::new(),
+            stderr: String::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn stderr(mut self, stderr: &str) -> Self {
+        stderr.clone_into(&mut self.stderr);
+        self
+    }
+}
+
+#[cfg(test)]
+impl CommandRunner {
+    /// A runner that answers only the configured commands. Any other
+    /// command fails to spawn, which is also the safe default world: a
+    /// tool that is not installed.
+    pub fn create_null(answers: impl IntoIterator<Item = (Execution, Answer)>) -> Self {
+        CommandRunner {
+            runner: Runner::Stubbed(answers.into_iter().collect()),
+            runs: OutputListener::default(),
         }
     }
 
     /// Observe every command this runner is asked to execute.
     pub fn track_runs(&self) -> OutputTracker<Execution> {
-        self.listener.track()
+        self.runs.track()
+    }
+}
+
+#[cfg(test)]
+mod stub {
+    use std::collections::HashMap;
+    use std::io;
+
+    use super::{Answer, Execution, RawOutput, command_line};
+
+    pub(super) fn output(
+        answers: &HashMap<Execution, Answer>,
+        program: &str,
+        args: &[&str],
+    ) -> io::Result<RawOutput> {
+        let answer = answers.get(&Execution::new(program, args)).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                format!(
+                    "Nulled CommandRunner: no answer configured for `{}`",
+                    command_line(program, args)
+                ),
+            )
+        })?;
+        Ok(RawOutput {
+            // The same text a real `ExitStatus` shows on Unix.
+            failure: (answer.code != 0).then(|| format!("exit status: {}", answer.code)),
+            stdout: answer.stdout.clone().into_bytes(),
+            stderr: answer.stderr.clone().into_bytes(),
+        })
     }
 }
 
@@ -105,49 +198,52 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    fn poetry_env_info() -> Execution {
+        Execution::new("poetry", &["env", "info", "-p"])
+    }
+
     #[test]
-    fn nulled_runner_answers_configured_command() {
-        let runner = CommandRunner::create_null([(
-            "poetry env info -p",
-            NullResponse::Stdout("/venvs/demo".into()),
-        )]);
+    fn nulled_runner_answers_configured_command_through_the_shared_path() {
+        let runner =
+            CommandRunner::create_null([(poetry_env_info(), Answer::stdout("/venvs/demo\n"))]);
         let out = runner.run("poetry", &["env", "info", "-p"]).unwrap();
         assert_eq!(out, "/venvs/demo");
     }
 
     #[test]
     fn nulled_runner_fails_loudly_on_unconfigured_command() {
-        let runner = CommandRunner::create_null([] as [(&str, NullResponse); 0]);
-        let err = runner.run("uv", &["python", "find"]).unwrap_err();
-        assert!(err.to_string().contains("no response configured"), "{err}");
-        assert!(err.to_string().contains("uv python find"), "{err}");
+        let runner = CommandRunner::create_null([]);
+        let err = format!("{:#}", runner.run("uv", &["python", "find"]).unwrap_err());
+        assert!(err.contains("no answer configured"), "{err}");
+        assert!(err.contains("uv python find"), "{err}");
     }
 
     #[test]
-    fn nulled_runner_returns_configured_failure() {
+    fn nonzero_exit_reports_the_code_and_stderr() {
         let runner = CommandRunner::create_null([(
-            "poetry env info -p",
-            NullResponse::Failure("poetry could not find a venv".into()),
+            poetry_env_info(),
+            Answer::exit(1).stderr("poetry could not find a venv\n"),
         )]);
-        let err = runner.run("poetry", &["env", "info", "-p"]).unwrap_err();
-        assert!(err.to_string().contains("poetry could not find a venv"));
+        let err = runner
+            .run("poetry", &["env", "info", "-p"])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("(exit status: 1)"), "{err}");
+        assert!(err.ends_with(": poetry could not find a venv"), "{err}");
     }
 
     #[test]
-    fn tracker_records_executions_in_both_modes() {
-        let runner = CommandRunner::create_null([("echo hi", NullResponse::Stdout(String::new()))]);
+    fn tracker_records_answered_and_unanswered_runs() {
+        let runner =
+            CommandRunner::create_null([(Execution::new("echo", &["hi"]), Answer::stdout(""))]);
         let tracker = runner.track_runs();
         let _ = runner.run("echo", &["hi"]);
         let _ = runner.run("not", &["configured"]);
         assert_eq!(
             tracker.data(),
             vec![
-                Execution {
-                    command: "echo hi".into()
-                },
-                Execution {
-                    command: "not configured".into()
-                },
+                Execution::new("echo", &["hi"]),
+                Execution::new("not", &["configured"]),
             ]
         );
     }
@@ -163,7 +259,20 @@ mod test {
     #[test]
     fn real_runner_reports_nonzero_exit_as_error() {
         let runner = CommandRunner::create();
-        assert!(runner.run("false", &[]).is_err());
+        let err = runner.run("false", &[]).unwrap_err().to_string();
+        assert!(err.contains("(exit status: 1)"), "{err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn real_runner_reports_the_signal_that_ended_the_command() {
+        let runner = CommandRunner::create();
+        // Signal 9 is SIGKILL, which the shell cannot catch.
+        let err = runner
+            .run("sh", &["-c", "kill -9 $$"])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("(signal: 9 (SIGKILL))"), "{err}");
     }
 
     #[test]

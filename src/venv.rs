@@ -113,7 +113,7 @@ fn pep621_venv(fs: &FileSystem, env: &Env) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::infra::process::NullResponse;
+    use crate::infra::process::{Answer, Execution};
     use pretty_assertions::assert_eq;
 
     const POETRY_MANIFEST: &str = "[tool.poetry.dependencies]\nrequests = \"^2.31\"\n";
@@ -126,7 +126,11 @@ mod test {
     }
 
     fn no_commands() -> CommandRunner {
-        CommandRunner::create_null([] as [(&str, NullResponse); 0])
+        CommandRunner::create_null([])
+    }
+
+    fn poetry_env_info(answer: Answer) -> CommandRunner {
+        CommandRunner::create_null([(Execution::new("poetry", &["env", "info", "-p"]), answer)])
     }
 
     fn no_env() -> Env {
@@ -136,10 +140,7 @@ mod test {
     #[test]
     fn poetry_project_asks_poetry() {
         let fs = FileSystem::create_null([("poetry.lock", "")]);
-        let runner = CommandRunner::create_null([(
-            "poetry env info -p",
-            NullResponse::Stdout("/venvs/demo-py3.12".into()),
-        )]);
+        let runner = poetry_env_info(Answer::stdout("/venvs/demo-py3.12\n"));
         let venv = find_venv(&fs, &runner, &no_env(), &manifest(POETRY_MANIFEST)).unwrap();
         assert_eq!(venv, PathBuf::from("/venvs/demo-py3.12"));
     }
@@ -154,10 +155,7 @@ mod test {
     #[test]
     fn empty_poetry_output_falls_back_to_local_venv() {
         let fs = FileSystem::create_null([("poetry.lock", ""), (".venv/lib/site.py", "")]);
-        let runner = CommandRunner::create_null([(
-            "poetry env info -p",
-            NullResponse::Stdout(String::new()),
-        )]);
+        let runner = poetry_env_info(Answer::stdout(""));
         let venv = find_venv(&fs, &runner, &no_env(), &manifest(POETRY_MANIFEST)).unwrap();
         assert_eq!(venv, PathBuf::from(".venv"));
     }
@@ -165,10 +163,7 @@ mod test {
     #[test]
     fn empty_poetry_output_without_local_venv_is_an_error() {
         let fs = FileSystem::create_null([("poetry.lock", "")]);
-        let runner = CommandRunner::create_null([(
-            "poetry env info -p",
-            NullResponse::Stdout(String::new()),
-        )]);
+        let runner = poetry_env_info(Answer::stdout(""));
         let err = find_venv(&fs, &runner, &no_env(), &manifest(POETRY_MANIFEST)).unwrap_err();
         assert!(err.to_string().contains("poetry install"), "{err}");
     }

@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 
-pub mod app;
+mod app;
 mod ignorefile;
 mod imports;
-pub mod infra;
+mod infra;
 mod matching;
 mod package;
 mod pyproject;
