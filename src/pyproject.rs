@@ -499,8 +499,8 @@ mod properties {
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
 
-    // P4: whichever table layout declares them, parsing returns exactly the
-    // declared names in the right bucket.
+    // Whichever table layout declares them, parsing returns exactly the
+    // declared names in the right group.
     #[hegel::test]
     fn declared_names_are_extracted_from_any_layout(tc: hegel::TestCase) {
         // Rendered as TOML table keys, where duplicates are a parse error.
@@ -557,7 +557,7 @@ mod properties {
         assert_eq!(dev, expected_dev);
     }
 
-    // P5: arbitrary include-group graphs, including cycles and dangling
+    // Arbitrary include-group graphs, including cycles and dangling
     // references, parse fine and yield exactly the union of string entries.
     #[hegel::test]
     fn include_group_graphs_always_yield_the_union(tc: hegel::TestCase) {

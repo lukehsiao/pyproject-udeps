@@ -407,7 +407,7 @@ mod properties {
         imports
     }
 
-    // P1: whatever imports we render, however we format them, extraction
+    // Whatever imports we render, however we format them, extraction
     // returns exactly those imports and nothing from the decoy text.
     #[hegel::test]
     fn extraction_roundtrips_rendered_imports(tc: hegel::TestCase) {
@@ -431,7 +431,7 @@ mod properties {
         assert_eq!(sorted(extract_imports(&source)), sorted(expected));
     }
 
-    // P2: arbitrary text, including invalid syntax and exotic Unicode, must
+    // Arbitrary text, including invalid syntax and exotic Unicode, must
     // never panic the extractor.
     #[hegel::test]
     fn extraction_never_panics(tc: hegel::TestCase) {
@@ -439,7 +439,7 @@ mod properties {
         let _ = extract_imports(&source);
     }
 
-    // P3: relative imports can never refer to a third-party distribution, so
+    // Relative imports can never refer to a third-party distribution, so
     // they are never extracted no matter the dot depth.
     #[hegel::test]
     fn relative_imports_are_never_extracted(tc: hegel::TestCase) {

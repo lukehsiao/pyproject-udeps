@@ -95,7 +95,7 @@ mod properties {
     use crate::testgen::identifier;
     use hegel::generators;
 
-    // P11: whatever mix of names, comments, and blank lines the file holds,
+    // Whatever mix of names, comments, and blank lines the file holds,
     // parsing returns exactly the names.
     #[hegel::test]
     fn parse_returns_exactly_the_listed_names(tc: hegel::TestCase) {
