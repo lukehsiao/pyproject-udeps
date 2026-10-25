@@ -86,28 +86,32 @@ impl FileSystem {
 
     /// Walk the project in the current directory for Python files
     /// (`.py`/`.pyi`) in the background, skipping gitignored entries and
-    /// hidden directories. Unreadable entries are logged and skipped; the
-    /// walk never fails a file into the caller.
-    #[must_use]
-    pub fn walk_project(&self) -> flume::Receiver<PyFile> {
-        self.walk(Walk::Project)
+    /// hidden directories.
+    ///
+    /// Each file is read and passed to `visit` on the walk's own threads,
+    /// and the result is sent to `tx`. Unreadable entries are logged and
+    /// skipped; the walk never fails a file into the caller. It stops early
+    /// once every receiver is gone.
+    pub fn walk_project<T: Send + 'static>(&self, visit: fn(PyFile) -> T, tx: flume::Sender<T>) {
+        self.walk(Walk::Project, visit, tx);
     }
 
     /// Walk every Python file under the virtualenv at `venv` in the
     /// background, like [`FileSystem::walk_project`] but skipping nothing.
-    #[must_use]
-    pub fn walk_venv(&self, venv: &Path) -> flume::Receiver<PyFile> {
-        self.walk(Walk::Venv(venv.to_path_buf()))
+    pub fn walk_venv<T: Send + 'static>(
+        &self,
+        venv: &Path,
+        visit: fn(PyFile) -> T,
+        tx: flume::Sender<T>,
+    ) {
+        self.walk(Walk::Venv(venv.to_path_buf()), visit, tx);
     }
 
-    fn walk(&self, walk: Walk) -> flume::Receiver<PyFile> {
-        // Bounded so walkers block instead of buffering a whole venv in
-        // memory when the consumer is slower than the walk.
-        let (tx, rx) = flume::bounded::<PyFile>(100);
+    fn walk<T: Send + 'static>(&self, walk: Walk, visit: fn(PyFile) -> T, tx: flume::Sender<T>) {
         match &self.inner {
             Inner::Real => match walk {
-                Walk::Project => spawn_real_walk(PathBuf::from("."), true, tx),
-                Walk::Venv(venv) => spawn_real_walk(venv, false, tx),
+                Walk::Project => spawn_real_walk(PathBuf::from("."), true, visit, tx),
+                Walk::Venv(venv) => spawn_real_walk(venv, false, visit, tx),
             },
             #[cfg(test)]
             Inner::Null(files) => {
@@ -123,7 +127,7 @@ impl FileSystem {
                                 path: path.clone(),
                                 contents: decode_lossy(contents.clone()),
                             };
-                            if tx.send(file).is_err() {
+                            if tx.send(visit(file)).is_err() {
                                 return;
                             }
                         }
@@ -131,7 +135,6 @@ impl FileSystem {
                 });
             }
         }
-        rx
     }
 }
 
@@ -166,7 +169,12 @@ fn decode_lossy(bytes: Vec<u8>) -> String {
 /// Walk `root` with the real filesystem. `standard_filters` skips
 /// gitignored entries and hidden directories. The Python type filter
 /// still lets hidden `.py` files through.
-fn spawn_real_walk(root: PathBuf, standard_filters: bool, tx: flume::Sender<PyFile>) {
+fn spawn_real_walk<T: Send + 'static>(
+    root: PathBuf,
+    standard_filters: bool,
+    visit: fn(PyFile) -> T,
+    tx: flume::Sender<T>,
+) {
     thread::spawn(move || {
         let types = match TypesBuilder::new().add_defaults().select("py").build() {
             Ok(types) => types,
@@ -198,7 +206,7 @@ fn spawn_real_walk(root: PathBuf, standard_filters: bool, tx: flume::Sender<PyFi
                         return Continue;
                     }
                 };
-                if tx.send(PyFile { path, contents }).is_err() {
+                if tx.send(visit(PyFile { path, contents })).is_err() {
                     // The receiver is gone; no point continuing the walk.
                     return Quit;
                 }
@@ -235,10 +243,16 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn collect_sorted(rx: &flume::Receiver<PyFile>) -> Vec<PathBuf> {
-        let mut paths: Vec<PathBuf> = rx.iter().map(|f| f.path).collect();
+    fn sorted_paths(walk: impl FnOnce(flume::Sender<PathBuf>)) -> Vec<PathBuf> {
+        let (tx, rx) = flume::unbounded();
+        walk(tx);
+        let mut paths: Vec<PathBuf> = rx.iter().collect();
         paths.sort();
         paths
+    }
+
+    fn path_of(file: PyFile) -> PathBuf {
+        file.path
     }
 
     #[test]
@@ -252,7 +266,7 @@ mod test {
             ("/elsewhere/other.py", ""),
         ]);
         assert_eq!(
-            collect_sorted(&fs.walk_project()),
+            sorted_paths(|tx| fs.walk_project(path_of, tx)),
             vec![
                 PathBuf::from("main.py"),
                 PathBuf::from("pkg/.hidden.py"),
@@ -269,11 +283,11 @@ mod test {
             ("main.py", ""),
         ]);
         assert_eq!(
-            collect_sorted(&fs.walk_venv(Path::new(".venv"))),
+            sorted_paths(|tx| fs.walk_venv(Path::new(".venv"), path_of, tx)),
             vec![PathBuf::from(".venv/lib/site.py")]
         );
         assert_eq!(
-            collect_sorted(&fs.walk_venv(Path::new("/venv"))),
+            sorted_paths(|tx| fs.walk_venv(Path::new("/venv"), path_of, tx)),
             vec![PathBuf::from("/venv/lib/.hidden/site.py")]
         );
     }
@@ -330,9 +344,7 @@ mod test {
         std::fs::create_dir(dir.path().join(".git")).unwrap();
         // The project walk always starts at the current directory, so walk
         // the temporary directory through the shared real walk instead.
-        let (tx, rx) = flume::unbounded();
-        spawn_real_walk(dir.path().to_path_buf(), true, tx);
-        let paths = collect_sorted(&rx);
+        let paths = sorted_paths(|tx| spawn_real_walk(dir.path().to_path_buf(), true, path_of, tx));
         assert_eq!(
             paths,
             vec![
@@ -352,7 +364,7 @@ mod test {
         ]);
         std::fs::create_dir(dir.path().join(".git")).unwrap();
         let fs = FileSystem::create();
-        let paths = collect_sorted(&fs.walk_venv(dir.path()));
+        let paths = sorted_paths(|tx| fs.walk_venv(dir.path(), path_of, tx));
         assert_eq!(
             paths,
             vec![
@@ -366,7 +378,9 @@ mod test {
     fn real_walk_reads_non_utf8_files_lossily() {
         let dir = tempdir_with(&[("legacy.py", b"import os\n\xff\xfe\n" as &[u8])]);
         let fs = FileSystem::create();
-        let files: Vec<PyFile> = fs.walk_venv(dir.path()).iter().collect();
+        let (tx, rx) = flume::unbounded();
+        fs.walk_venv(dir.path(), |file| file, tx);
+        let files: Vec<PyFile> = rx.iter().collect();
         assert_eq!(files.len(), 1);
         assert!(files[0].contents.starts_with("import os\n"));
     }

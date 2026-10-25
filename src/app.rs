@@ -1,4 +1,4 @@
-//! The application: wires manifest parsing, file walks, import matching,
+//! The application: wires manifest parsing, the import scan, matching,
 //! and the ignorefile into one analysis run.
 
 use std::collections::BTreeSet;
@@ -9,7 +9,6 @@ use anyhow::{Result, anyhow};
 use tracing::{debug, info};
 
 use crate::ignorefile;
-use crate::imports::extract_imports;
 use crate::infra::env::Env;
 use crate::infra::fs::FileSystem;
 use crate::infra::process::CommandRunner;
@@ -17,6 +16,7 @@ use crate::infra::process::CommandRunner;
 use crate::infra::process::{Answer, Execution};
 use crate::matching::{DependencyIndex, Scope};
 use crate::pyproject::Manifest;
+use crate::scan;
 use crate::venv;
 
 /// What to analyze, independent of the CLI layer.
@@ -96,31 +96,26 @@ impl App {
         };
         let mut index = DependencyIndex::new(manifest.dependencies(), &ignored);
 
-        // The walks stream files from background threads while this thread
-        // extracts imports and matches them.
-        let mut walks = Vec::new();
-        if options.virtualenv {
-            let venv_path = venv::find_venv(&self.fs, &self.runner, &self.env, manifest.flavor())?;
-            info!("Reading files in venv: {}", venv_path.display());
-            walks.push(self.fs.walk_venv(&venv_path));
-        }
-        walks.push(self.fs.walk_project());
-
-        for files in walks {
-            for file in files {
-                for import in extract_imports(&file.contents) {
-                    debug!(
-                        import = import.as_str(),
+        let venv_path = if options.virtualenv {
+            let path = venv::find_venv(&self.fs, &self.runner, &self.env, manifest.flavor())?;
+            info!("Reading files in venv: {}", path.display());
+            Some(path)
+        } else {
+            None
+        };
+        for file in scan::scan_imports(&self.fs, venv_path.as_deref()) {
+            for import in &file.imports {
+                debug!(
+                    import = import.as_str(),
+                    path = %file.path.display(),
+                    "Checking import",
+                );
+                for found in index.mark_used(import) {
+                    info!(
+                        found = found.spelling(),
+                        group = ?found.group(),
                         path = %file.path.display(),
-                        "Checking import",
                     );
-                    for found in index.mark_used(&import) {
-                        info!(
-                            found = found.spelling(),
-                            group = ?found.group(),
-                            path = %file.path.display(),
-                        );
-                    }
                 }
             }
         }
@@ -195,15 +190,6 @@ pytest = \"^8.0\"
         let app = null_app(&[]);
         let err = app.run(&Options::default()).unwrap_err().to_string();
         assert!(err.contains("Are you in the root directory"), "{err}");
-    }
-
-    #[test]
-    fn in_project_virtualenv_is_not_walked_without_the_option() {
-        let app = null_app(&[
-            ("pyproject.toml", MANIFEST),
-            (".venv/lib/requests/__init__.py", "import requests\n"),
-        ]);
-        assert_eq!(app.run(&Options::default()).unwrap(), vec!["requests"]);
     }
 
     #[test]

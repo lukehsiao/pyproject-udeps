@@ -4,6 +4,16 @@ use std::process;
 use tracing_log::AsTrace;
 
 fn main() {
+    // The walk parses Python on threads from the ignore crate, which get
+    // Rust's 2 MiB default stack. Deeply nested, valid Python overflows
+    // that, so ask for the 8 MiB a Linux main thread gets, unless the user
+    // chose a size.
+    if std::env::var_os("RUST_MIN_STACK").is_none() {
+        // SAFETY: No other thread exists yet, so nothing reads the
+        // environment while it changes.
+        unsafe { std::env::set_var("RUST_MIN_STACK", "8388608") };
+    }
+
     let cli = Cli::parse();
 
     tracing_subscriber::fmt()

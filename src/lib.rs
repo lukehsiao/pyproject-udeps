@@ -9,6 +9,7 @@ mod infra;
 mod matching;
 mod package;
 mod pyproject;
+mod scan;
 #[cfg(test)]
 mod testgen;
 mod venv;
