@@ -95,16 +95,25 @@ impl DependencyIndex {
 
     /// Mark every dependency this import could refer to as used.
     ///
+    /// `owner` is the package that installed the file the import comes
+    /// from, if any. It gets no credit from the import, since its imports
+    /// of itself say nothing about whether the project needs it.
+    ///
     /// Returns the dependencies that were newly marked, for logging.
     /// Marking is idempotent; an import that matches nothing returns an
     /// empty vec.
-    pub fn mark_used(&mut self, import: &Import) -> Vec<DeclaredDependency> {
+    pub fn mark_used(
+        &mut self,
+        import: &Import,
+        owner: Option<&PackageName>,
+    ) -> Vec<DeclaredDependency> {
         let mut newly_used = Vec::new();
         for key in import_keys(import.as_str()) {
             if let Some(packages) = self.keys.get(key.as_ref()) {
                 newly_used.extend(
                     packages
                         .iter()
+                        .filter(|name| Some(*name) != owner)
                         .filter_map(|name| self.remaining.remove(name)),
                 );
             }
@@ -191,7 +200,7 @@ mod test {
     }
 
     fn mark(idx: &mut DependencyIndex, import: &Import) -> Vec<String> {
-        idx.mark_used(import)
+        idx.mark_used(import, None)
             .iter()
             .map(|dep| dep.spelling().to_owned())
             .collect()
@@ -211,30 +220,30 @@ mod test {
     #[test]
     fn known_module_matches() {
         let mut idx = index(&["scikit-learn"]);
-        idx.mark_used(&import("sklearn"));
+        idx.mark_used(&import("sklearn"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dash_to_underscore_alias_matches() {
         let mut idx = index(&["typing-extensions"]);
-        idx.mark_used(&import("typing_extensions"));
+        idx.mark_used(&import("typing_extensions"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn namespace_package_module_matches() {
         let mut idx = index(&["google-cloud-bigquery"]);
-        idx.mark_used(&import("google.cloud.bigquery"));
+        idx.mark_used(&import("google.cloud.bigquery"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn declared_case_and_separators_are_normalized() {
         let mut idx = index(&["Flask", "PyYAML", "ruamel.yaml.clib"]);
-        idx.mark_used(&import("flask"));
-        idx.mark_used(&import("yaml"));
-        idx.mark_used(&import("ruamel_yaml_clib"));
+        idx.mark_used(&import("flask"), None);
+        idx.mark_used(&import("yaml"), None);
+        idx.mark_used(&import("ruamel_yaml_clib"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
@@ -244,14 +253,14 @@ mod test {
         // apache-airflow-providers-common-sql, and an import below that
         // module must still match.
         let mut idx = index(&["apache-airflow-providers-common-sql"]);
-        idx.mark_used(&import("airflow.providers.common.sql.hooks.sql.X"));
+        idx.mark_used(&import("airflow.providers.common.sql.hooks.sql.X"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dbt_adapter_import_matches() {
         let mut idx = index(&["dbt-postgres"]);
-        idx.mark_used(&import("dbt.adapters.postgres"));
+        idx.mark_used(&import("dbt.adapters.postgres"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
@@ -268,21 +277,21 @@ mod test {
     #[test]
     fn dotted_join_matches_sqlalchemy_extensions() {
         let mut idx = index(&["sqlalchemy-ext"]);
-        idx.mark_used(&import("sqlalchemy.ext"));
+        idx.mark_used(&import("sqlalchemy.ext"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn first_two_segments_match() {
         let mut idx = index(&["google-auth"]);
-        idx.mark_used(&import("google.auth.transport.requests"));
+        idx.mark_used(&import("google.auth.transport.requests"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn top_level_segment_matches() {
         let mut idx = index(&["google"]);
-        idx.mark_used(&import("google.cloud"));
+        idx.mark_used(&import("google.cloud"), None);
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
@@ -348,6 +357,34 @@ mod test {
             mark(&mut idx, &import("Acme.Widgets.core")),
             vec!["Acme.Widgets"]
         );
+    }
+
+    #[test]
+    fn an_import_from_a_packages_own_file_does_not_mark_it_used() {
+        let mut idx = index(&["graphviz"]);
+        let owner = PackageName::new("graphviz");
+        assert_eq!(idx.mark_used(&import("graphviz"), Some(&owner)), Vec::new());
+        assert_eq!(unused(&idx), vec!["graphviz"]);
+    }
+
+    #[test]
+    fn an_import_from_another_packages_file_marks_it_used() {
+        // griffelib installs the griffe module, and the griffe metapackage
+        // counts as used when griffelib imports it.
+        let mut idx = index(&["graphviz", "griffe"]);
+        idx.mark_used(&import("graphviz"), Some(&PackageName::new("jinja2")));
+        idx.mark_used(&import("griffe"), Some(&PackageName::new("griffelib")));
+        assert_eq!(unused(&idx), Vec::<String>::new());
+    }
+
+    #[test]
+    fn only_the_owner_loses_credit_when_packages_share_a_key() {
+        // The map lists module `yaml` for pyyaml, and `yaml` is also a
+        // package of its own.
+        let mut idx = index(&["pyyaml", "yaml"]);
+        let marked = idx.mark_used(&import("yaml"), Some(&PackageName::new("pyyaml")));
+        let marked: Vec<&str> = marked.iter().map(DeclaredDependency::spelling).collect();
+        assert_eq!(marked, vec!["yaml"]);
     }
 
     #[test]
@@ -436,7 +473,7 @@ mod properties {
         let separator = tc.draw(generators::sampled_from(vec![".", "_"]));
         let module = segments.join(separator);
         let mut idx = index_of(&[tc.draw(respelled(segments))]);
-        idx.mark_used(&tc.draw(import_at_or_below(module)));
+        idx.mark_used(&tc.draw(import_at_or_below(module)), None);
         assert_eq!(all_unused(&idx), Vec::<String>::new());
     }
 
@@ -452,7 +489,7 @@ mod properties {
             .draw(generators::sampled_from(modules.to_vec()))
             .to_string();
         let mut idx = index_of(&[tc.draw(respelled(segments))]);
-        idx.mark_used(&tc.draw(import_at_or_below(module)));
+        idx.mark_used(&tc.draw(import_at_or_below(module)), None);
         assert_eq!(all_unused(&idx), Vec::<String>::new());
     }
 
@@ -473,7 +510,7 @@ mod properties {
             .max_size(8),
         );
         for module in imports {
-            let marked = idx.mark_used(&Import::new(&module));
+            let marked = idx.mark_used(&Import::new(&module), None);
             assert_eq!(marked, Vec::new());
         }
         let mut expected: Vec<String> = packages;
@@ -494,9 +531,9 @@ mod properties {
         for _ in 0..steps {
             let import = tc.draw(arbitrary_import());
             let before = all_unused(&idx);
-            let first = idx.mark_used(&import);
+            let first = idx.mark_used(&import, None);
             let after_once = all_unused(&idx);
-            let second = idx.mark_used(&import);
+            let second = idx.mark_used(&import, None);
             assert_eq!(second, Vec::new(), "second mark must be a no-op");
             assert_eq!(all_unused(&idx), after_once);
 
@@ -520,7 +557,7 @@ mod properties {
     fn marking_never_panics(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(generators::text()).max_size(5));
         let mut idx = index_of(&packages);
-        idx.mark_used(&Import::new(&tc.draw(generators::text())));
+        idx.mark_used(&Import::new(&tc.draw(generators::text())), None);
         idx.unused(Scope::MainAndDev);
     }
 
@@ -534,40 +571,80 @@ mod properties {
         used: BTreeSet<PackageName>,
     }
 
+    /// The module paths, as segments, that an import of `path` reaches:
+    /// `path` itself and, for a dbt adapter, `dbt.<adapter>`. Anything at or
+    /// below one of these is reached too.
+    fn reached(path: &str) -> Vec<Vec<&str>> {
+        let segments: Vec<&str> = path.split('.').collect();
+        let mut reached = vec![segments.clone()];
+        if let ["dbt", "adapters", adapter, ..] = segments[..] {
+            reached.push(vec!["dbt", adapter]);
+        }
+        reached
+    }
+
+    /// The module paths, as segments, that `dep` provides: those the name
+    /// map lists for it, its name's dash-separated segments, its name with
+    /// underscores as one module, and its declared spelling with dashes or
+    /// dots between segments.
+    fn provided(dep: &DeclaredDependency) -> Vec<Vec<String>> {
+        let name = dep.name().as_str();
+        let mut provided: Vec<Vec<String>> = vec![
+            name.split('-').map(str::to_owned).collect(),
+            vec![name.replace('-', "_")],
+            dep.spelling()
+                .split(['-', '.'])
+                .map(str::to_owned)
+                .collect(),
+        ];
+        provided.extend(
+            KNOWN_MODULES
+                .get(name)
+                .into_iter()
+                .flat_map(|modules| modules.iter())
+                .map(|module| module.split('.').map(str::to_owned).collect()),
+        );
+        provided
+    }
+
+    /// Whether some module `dep` provides is at or above a path `path`
+    /// reaches.
+    fn reaches(dep: &DeclaredDependency, path: &str) -> bool {
+        let reached = reached(path);
+        provided(dep).iter().any(|p| {
+            reached
+                .iter()
+                .any(|r| r.len() >= p.len() && r.iter().zip(p).all(|(r, p)| r == p))
+        })
+    }
+
     impl IndexVsModel {
-        /// Mark every package that provides a module at or above a path the
-        /// import reaches. A package provides the modules the name map lists
-        /// for it, its name's dash-separated segments, its name with
-        /// underscores as one module, and its declared spelling with dashes
-        /// or dots between segments.
-        fn model_mark(&mut self, import: &Import) {
-            let path: Vec<&str> = import.as_str().split('.').collect();
-            let mut reached = vec![path.clone()];
-            if let ["dbt", "adapters", adapter, ..] = path[..] {
-                reached.push(vec!["dbt", adapter]);
-            }
-            for dep in &self.declared {
-                let name = dep.name().as_str();
-                let underscored = name.replace('-', "_");
-                let mut provided: Vec<Vec<&str>> = vec![
-                    name.split('-').collect(),
-                    vec![underscored.as_str()],
-                    dep.spelling().split(['-', '.']).collect(),
-                ];
-                provided.extend(
-                    KNOWN_MODULES
-                        .get(name)
-                        .into_iter()
-                        .flat_map(|modules| modules.iter())
-                        .map(|module| module.split('.').collect()),
-                );
-                if provided
-                    .iter()
-                    .any(|p| reached.iter().any(|r| r.starts_with(p)))
-                {
-                    self.used.insert(dep.name().clone());
-                }
-            }
+        /// Mark every package the import reaches, except the package that
+        /// owns the importing file.
+        fn model_mark(&mut self, import: &Import, owner: Option<&PackageName>) {
+            let used: Vec<PackageName> = self
+                .declared
+                .iter()
+                .filter(|dep| reaches(dep, import.as_str()) && Some(dep.name()) != owner)
+                .map(|dep| dep.name().clone())
+                .collect();
+            self.used.extend(used);
+        }
+    }
+
+    /// An optional owner of the importing file: none, a package nobody
+    /// declared, or a declared package, so a package's imports of itself
+    /// come up often.
+    fn draw_owner(tc: &TestCase, declared: &[DeclaredDependency]) -> Option<PackageName> {
+        match tc.draw(generators::integers::<u8>().max_value(2)) {
+            0 => None,
+            1 => Some(PackageName::new(&tc.draw(package_name()))),
+            _ if declared.is_empty() => None,
+            _ => Some(
+                tc.draw(generators::sampled_from(declared.to_vec()))
+                    .name()
+                    .clone(),
+            ),
         }
     }
 
@@ -578,8 +655,9 @@ mod properties {
         #[rule]
         fn mark_arbitrary(&mut self, tc: TestCase) {
             let import = tc.draw(arbitrary_import());
-            self.idx.mark_used(&import);
-            self.model_mark(&import);
+            let owner = draw_owner(&tc, &self.declared);
+            self.idx.mark_used(&import, owner.as_ref());
+            self.model_mark(&import, owner.as_ref());
         }
 
         #[allow(clippy::needless_pass_by_value)]
@@ -588,8 +666,9 @@ mod properties {
             tc.assume(!self.declared.is_empty());
             let package = tc.draw(generators::sampled_from(self.declared.clone()));
             let import = Import::new(package.spelling());
-            self.idx.mark_used(&import);
-            self.model_mark(&import);
+            let owner = draw_owner(&tc, &self.declared);
+            self.idx.mark_used(&import, owner.as_ref());
+            self.model_mark(&import, owner.as_ref());
         }
 
         #[invariant]

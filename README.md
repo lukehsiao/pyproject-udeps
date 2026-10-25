@@ -324,9 +324,8 @@ Prefect never imports these six, but each one does necessary work.
 A report of them is not a false positive, because "never imported" is true.
 An ignorefile, or `--virtualenv`, is the correct tool for them.
 `pyproject-udeps -e` also searches the installed environment.
-It finds the imports in `sqlalchemy`, `jsonschema`, and `pydantic_extra_types`, and the report becomes only `jinja2-humanize-extension` and `opentelemetry-distro`.
-It also drops `opentelemetry-instrumentation-logging`, but only because that package imports its own modules.
-No other package imports it.
+It finds the imports in `sqlalchemy`, `jsonschema`, and `pydantic_extra_types`.
+A package's imports of its own modules do not count, so the report becomes `jinja2-humanize-extension`, `opentelemetry-distro`, and `opentelemetry-instrumentation-logging`.
 
 ## Trophy Case
 

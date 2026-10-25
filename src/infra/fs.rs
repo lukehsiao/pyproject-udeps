@@ -1,8 +1,8 @@
-//! Nullable wrapper over the filesystem: existence checks, lossy reads, and
-//! parallel walks for Python files.
+//! Nullable wrapper over the filesystem: existence checks, lossy reads,
+//! directory listings, and parallel walks for Python files.
 
 #[cfg(test)]
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 #[cfg(test)]
 use std::path::Component;
@@ -84,6 +84,36 @@ impl FileSystem {
         Ok(decode_lossy(bytes))
     }
 
+    /// The paths of the entries in directory `dir`, files and directories
+    /// alike, in no particular order.
+    ///
+    /// # Errors
+    ///
+    /// Fails when `dir` cannot be read, for example when it does not exist.
+    pub fn read_dir(&self, dir: &Path) -> io::Result<Vec<PathBuf>> {
+        match &self.inner {
+            Inner::Real => std::fs::read_dir(dir)?
+                .map(|entry| entry.map(|entry| entry.path()))
+                .collect(),
+            #[cfg(test)]
+            Inner::Null(files) => {
+                let entries: BTreeSet<PathBuf> = files
+                    .keys()
+                    .filter_map(|path| path.strip_prefix(dir).ok())
+                    .filter_map(|rest| rest.components().next())
+                    .map(|first| dir.join(first))
+                    .collect();
+                if entries.is_empty() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Nulled FileSystem: no directory at {}", dir.display()),
+                    ));
+                }
+                Ok(entries.into_iter().collect())
+            }
+        }
+    }
+
     /// Walk the project in the current directory for Python files
     /// (`.py`/`.pyi`) in the background, skipping gitignored entries and
     /// hidden directories.
@@ -153,8 +183,9 @@ fn in_hidden_dir(path: &Path) -> bool {
     })
 }
 
-#[cfg(test)]
-fn is_python_file(path: &Path) -> bool {
+/// Whether the walks read `path`: a `.py` or `.pyi` file, the same files
+/// the `py` type of the `ignore` crate matches.
+pub(crate) fn is_python_file(path: &Path) -> bool {
     path.extension()
         .is_some_and(|ext| ext == "py" || ext == "pyi")
 }
@@ -316,6 +347,24 @@ mod test {
         assert!(!fs.exists(Path::new("/other")));
     }
 
+    #[test]
+    fn nulled_read_dir_lists_files_and_directories_once() {
+        let fs = FileSystem::create_null([
+            ("/venv/lib/a.py", ""),
+            ("/venv/lib/pkg/b.py", ""),
+            ("/venv/lib/pkg/c.py", ""),
+            ("/venv/other.py", ""),
+        ]);
+        assert_eq!(
+            fs.read_dir(Path::new("/venv/lib")).unwrap(),
+            vec![
+                PathBuf::from("/venv/lib/a.py"),
+                PathBuf::from("/venv/lib/pkg")
+            ]
+        );
+        assert!(fs.read_dir(Path::new("/missing")).is_err());
+    }
+
     // Narrow integration tests: document the real walk behavior the nulled
     // walk mirrors, and the gitignore handling it does not.
 
@@ -383,5 +432,18 @@ mod test {
         let files: Vec<PyFile> = rx.iter().collect();
         assert_eq!(files.len(), 1);
         assert!(files[0].contents.starts_with("import os\n"));
+    }
+
+    #[test]
+    fn real_read_dir_lists_files_and_directories() {
+        let dir = tempdir_with(&[("a.py", b""), ("pkg/b.py", b"")]);
+        let fs = FileSystem::create();
+        let mut entries = fs.read_dir(dir.path()).unwrap();
+        entries.sort();
+        assert_eq!(
+            entries,
+            vec![dir.path().join("a.py"), dir.path().join("pkg")]
+        );
+        assert!(fs.read_dir(&dir.path().join("missing")).is_err());
     }
 }

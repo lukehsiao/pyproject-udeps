@@ -19,7 +19,7 @@ A declared dependency listed only in a development group or a tool's dev list.
 _Avoid_: group dependency, test dependency
 
 **Unused dependency**:
-A declared dependency that no import refers to.
+A declared dependency that no import refers to, other than its self-imports.
 _Avoid_: udep, dead dependency
 
 ### Names
@@ -35,6 +35,10 @@ _Avoid_: raw name, original name
 **Import**:
 The dotted module path that an import statement or a dynamic import call may reach, so `from a import b` is the import `a.b`.
 _Avoid_: module, import statement
+
+**Self-import**:
+An import of a dependency's module from a file that the same dependency installed, as its `RECORD` lists.
+_Avoid_: internal import, circular import
 
 **Name map**:
 The curated list of the modules a package provides, for packages whose modules do not follow from the package name.

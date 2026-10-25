@@ -103,14 +103,22 @@ impl App {
         } else {
             None
         };
-        for file in scan::scan_imports(&self.fs, venv_path.as_deref()) {
+        let files = scan::scan_imports(&self.fs, venv_path.as_deref());
+        // The walks fill the channel while this thread reads the RECORD
+        // files. Then the walks wait until this thread reads the channel.
+        let owners = venv_path
+            .as_deref()
+            .map(|venv| venv::installed_owners(&self.fs, venv))
+            .unwrap_or_default();
+        for file in files {
+            let owner = owners.get(&file.path);
             for import in &file.imports {
                 debug!(
                     import = import.as_str(),
                     path = %file.path.display(),
                     "Checking import",
                 );
-                for found in index.mark_used(import) {
+                for found in index.mark_used(import, owner) {
                     info!(
                         found = found.spelling(),
                         group = ?found.group(),
@@ -149,15 +157,39 @@ pytest = \"^8.0\"
     }
 
     #[test]
-    fn virtualenv_files_mark_usage() {
+    fn virtualenv_imports_count_unless_the_importing_package_owns_the_module() {
+        let site = "/venvs/demo/lib/python3.14/site-packages";
+        let file = |path: &str, contents: &str| (format!("{site}/{path}"), contents.to_owned());
         let app = App::create_null(NullConfig {
             files: vec![
-                ("pyproject.toml".into(), MANIFEST.into()),
-                ("main.py".into(), "import os\n".into()),
                 (
-                    "/venvs/demo/lib/requests/__init__.py".into(),
-                    "import requests\n".into(),
+                    "pyproject.toml".into(),
+                    "[tool.poetry.dependencies]\n\
+                     pyyaml = \"*\"\n\
+                     opentelemetry-instrumentation = \"*\"\n\
+                     griffe = \"*\"\n"
+                        .into(),
                 ),
+                ("main.py".into(), "import os\n".into()),
+                // pyyaml's private module imports pyyaml's own `yaml`.
+                file(
+                    "pyyaml-6.0.3.dist-info/RECORD",
+                    "_yaml/__init__.py,,\nyaml/__init__.py,,\n",
+                ),
+                file("_yaml/__init__.py", "import yaml\n"),
+                // A namespace child imports its parent package.
+                file(
+                    "opentelemetry_instrumentation_logging-0.65b0.dist-info/RECORD",
+                    "opentelemetry/instrumentation/logging/__init__.py,,\n",
+                ),
+                file(
+                    "opentelemetry/instrumentation/logging/__init__.py",
+                    "from opentelemetry.instrumentation.instrumentor import BaseInstrumentor\n",
+                ),
+                // griffelib installs the module that the griffe metapackage
+                // names, so its imports count for griffe.
+                file("griffelib-2.1.0.dist-info/RECORD", "griffe/__init__.py,,\n"),
+                file("griffe/__init__.py", "import griffe._internal\n"),
             ],
             commands: vec![(
                 Execution::new("poetry", &["env", "info", "-p"]),
@@ -169,7 +201,7 @@ pytest = \"^8.0\"
             virtualenv: true,
             ..Options::default()
         };
-        assert_eq!(app.run(&options).unwrap(), Vec::<String>::new());
+        assert_eq!(app.run(&options).unwrap(), vec!["pyyaml"]);
     }
 
     #[test]

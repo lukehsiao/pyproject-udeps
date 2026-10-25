@@ -1,4 +1,4 @@
-//! Virtualenv discovery.
+//! Virtualenv discovery, and the installed files in a virtualenv.
 //!
 //! Which tool manages the environment decides where to look. Lockfiles are
 //! the strongest signal, since a lockfile proves which tool actually
@@ -7,14 +7,16 @@
 //! reports if it exists, else the project's `.venv` if it exists, else an
 //! error.
 
-use std::path::{Path, PathBuf};
+use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 use tracing::debug;
 
 use crate::infra::env::Env;
-use crate::infra::fs::FileSystem;
+use crate::infra::fs::{FileSystem, is_python_file};
 use crate::infra::process::CommandRunner;
+use crate::package::PackageName;
 
 /// The tool that manages a project's environment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -93,6 +95,84 @@ fn env_var_path(env: &Env, name: &str) -> Result<PathBuf> {
         .ok_or_else(|| anyhow!("${name} is not set"))
 }
 
+/// The package that installed each Python file in the virtualenv at
+/// `venv`, from the `RECORD` file of every `*.dist-info` directory in its
+/// `site-packages`.
+///
+/// A distribution without a readable `RECORD` owns no files here, so its
+/// files count as any other file does.
+pub fn installed_owners(fs: &FileSystem, venv: &Path) -> HashMap<PathBuf, PackageName> {
+    let mut owners = HashMap::new();
+    for site in site_packages(fs, venv) {
+        for dist_info in fs.read_dir(&site).unwrap_or_default() {
+            let Some(name) = dist_info_name(&dist_info) else {
+                continue;
+            };
+            let record = match fs.read_to_string_lossy(&dist_info.join("RECORD")) {
+                Ok(record) => record,
+                Err(err) => {
+                    debug!(%err, dist_info = %dist_info.display(), "no RECORD");
+                    continue;
+                }
+            };
+            // `RECORD` is a CSV file whose columns are path, hash, and
+            // size. CSV quotes a path only when it holds a special
+            // character such as `,` or `"`, and no module path has those.
+            // A quoted row gives a path that starts with `"`, which no
+            // walked file has, so its file counts as any other file does.
+            for row in record.lines() {
+                let path = row.split_once(',').map_or(row, |(path, _)| path);
+                if is_python_file(Path::new(path)) {
+                    owners.insert(resolve(&site, path), name.clone());
+                }
+            }
+        }
+    }
+    owners
+}
+
+/// The `site-packages` directories of the virtualenv at `venv`:
+/// `lib/*/site-packages`, such as `lib/python3.14` or `lib/pypy3.10`, or
+/// `Lib/site-packages` on Windows. A directory that does not exist lists
+/// no entries.
+///
+/// Virtualenvs make `lib64` a link to `lib`, and the walk does not follow
+/// links, so `lib64` would only repeat files the walk never sends.
+fn site_packages(fs: &FileSystem, venv: &Path) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = fs
+        .read_dir(&venv.join("lib"))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|dir| dir.join("site-packages"))
+        .collect();
+    dirs.push(venv.join("Lib").join("site-packages"));
+    dirs
+}
+
+/// `site` joined with the `RECORD` path `relative`. Each `..` removes the
+/// last component, since walk paths contain no `..`. Scripts in `bin/`
+/// have rows such as `../../../bin/tool.py`, and the walk visits them.
+fn resolve(site: &Path, relative: &str) -> PathBuf {
+    let mut path = site.to_path_buf();
+    for component in Path::new(relative).components() {
+        if component == Component::ParentDir {
+            path.pop();
+        } else {
+            path.push(component);
+        }
+    }
+    path
+}
+
+/// The package a `{name}-{version}.dist-info` directory belongs to. The
+/// wheel format replaces each `-` in the name with `_`, so the first `-`
+/// ends the name.
+fn dist_info_name(dir: &Path) -> Option<PackageName> {
+    let stem = dir.file_name()?.to_str()?.strip_suffix(".dist-info")?;
+    let (name, _version) = stem.split_once('-')?;
+    Some(PackageName::new(name))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -109,6 +189,66 @@ mod test {
 
     fn no_env() -> Env {
         Env::create_null([] as [(&str, &str); 0])
+    }
+
+    #[test]
+    fn installed_owners_come_from_each_record() {
+        // PyPy names the directory under `lib` pypy3.X, not python3.X.
+        let site = "/venvs/demo/lib/pypy3.10/site-packages";
+        let fs = FileSystem::create_null([
+            (
+                format!("{site}/pyyaml-6.0.3.dist-info/RECORD"),
+                "_yaml/__init__.py,sha256=x,1\n\
+                 yaml/__init__.py,sha256=x,1\n\
+                 yaml/__init__.pyi,sha256=x,1\n\
+                 yaml/_yaml.cpython-314-x86_64-linux-gnu.so,sha256=x,1\n\
+                 ../../../bin/yaml-tool,sha256=x,1\n\
+                 ../../../bin/yaml_tool.py,sha256=x,1\n\
+                 pyyaml-6.0.3.dist-info/RECORD,,\n"
+                    .to_owned(),
+            ),
+            (
+                format!("{site}/opentelemetry_instrumentation_logging-0.65b0.dist-info/RECORD"),
+                "opentelemetry/instrumentation/logging/__init__.py,sha256=x,1\n".to_owned(),
+            ),
+            (
+                "/venvs/demo/Lib/site-packages/humanize-4.0.dist-info/RECORD".to_owned(),
+                "humanize/__init__.py,,\n../../Scripts/humanize_tool.py,,\n".to_owned(),
+            ),
+            // No RECORD, as with some old installers.
+            (
+                format!("{site}/legacy-1.0.dist-info/METADATA"),
+                String::new(),
+            ),
+            (format!("{site}/yaml/__init__.py"), String::new()),
+        ]);
+        let owners = installed_owners(&fs, Path::new("/venvs/demo"));
+        let mut owners: Vec<(String, &str)> = owners
+            .iter()
+            .map(|(path, name)| (path.display().to_string(), name.as_str()))
+            .collect();
+        owners.sort();
+        assert_eq!(
+            owners,
+            vec![
+                (
+                    "/venvs/demo/Lib/site-packages/humanize/__init__.py".to_owned(),
+                    "humanize"
+                ),
+                (
+                    "/venvs/demo/Scripts/humanize_tool.py".to_owned(),
+                    "humanize"
+                ),
+                ("/venvs/demo/bin/yaml_tool.py".to_owned(), "pyyaml"),
+                (format!("{site}/_yaml/__init__.py"), "pyyaml"),
+                (
+                    format!("{site}/opentelemetry/instrumentation/logging/__init__.py"),
+                    "opentelemetry-instrumentation-logging"
+                ),
+                (format!("{site}/yaml/__init__.py"), "pyyaml"),
+                (format!("{site}/yaml/__init__.pyi"), "pyyaml"),
+            ]
+        );
     }
 
     #[test]
