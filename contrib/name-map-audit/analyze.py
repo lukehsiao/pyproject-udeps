@@ -72,41 +72,34 @@ PTH_DIRS = {"pywin32": ["win32.lib", "win32", "pythonwin"]}
 
 
 def normalize(name):
-    """PEP 503 normalization, as normalize() in src/matching.rs."""
+    """PEP 503 normalization, as PackageName::new() in src/package.rs."""
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def candidate_keys(module):
-    """Mirror of candidate_keys() in src/matching.rs for `import module`.
-    The Rust version joins `from a.b import c` over a.b.c, so that form
-    yields the same keys apart from the dotted `a.b` itself, which no
-    simulated key contains."""
+def import_keys(module):
+    """Mirror of import_keys() in src/matching.rs for `import module`: every
+    dotted prefix of the module, plus dbt.<name> for a dbt adapter. The Rust
+    version also extends `from a.b import c` to a.b.c, which yields the same
+    keys as `import a.b.c`."""
+    keys = prefixes(module)
     parts = module.split(".")
-    cands = []
     if parts[:2] == ["dbt", "adapters"] and len(parts) >= 3:
-        cands.append(f"dbt-{parts[2]}")
-    cands.extend("-".join(parts[:k]) for k in range(2, len(parts) + 1))
-    cands.append(parts[0])
-    cands.append(module)
-    return cands
+        keys.append(f"dbt.{parts[2]}")
+    return keys
 
 
 def convention_keys(package):
-    """The keys import_names_for() in src/matching.rs derives without the
-    map, for the normalized spelling. Other spellings add keys and never
-    remove them, so what this covers is covered for every spelling."""
+    """The keys package_keys() in src/matching.rs derives without the map,
+    for the normalized spelling. Other spellings add keys and never remove
+    them, so what this covers is covered for every spelling."""
     n = normalize(package)
-    return {n, n.replace("-", "_")}
-
-
-def module_key(module):
-    """How import_names_for() turns a map module into a match key."""
-    return module.replace(".", "-")
+    return {n.replace("-", "."), n.replace("-", "_")}
 
 
 def matches(keys, module):
-    """Whether importing `module`, or anything below it, hits a key."""
-    return not keys.isdisjoint(candidate_keys(module))
+    """Whether importing `module`, or anything below it, hits a key. Map
+    modules are dotted paths already, so they are keys as written."""
+    return not keys.isdisjoint(import_keys(module))
 
 
 def is_evidence(module):
@@ -184,7 +177,7 @@ def audit(known, module_sets):
             if is_evidence(m)
         }
         entry_points.discard(None)
-        keys = convention_keys(package) | {module_key(m) for m in mapped}
+        keys = convention_keys(package) | set(mapped)
         if add := sorted(m for m in entry_points if not matches(keys, m)):
             additions[package] = add
     return additions, suspect
@@ -196,7 +189,7 @@ def removable(known):
     found = {}
     for package, modules in known.items():
         for module in modules:
-            others = {module_key(m) for m in modules if m != module}
+            others = {m for m in modules if m != module}
             if not is_evidence(module) or matches(convention_keys(package) | others, module):
                 found.setdefault(package, []).append(module)
     return found
