@@ -4,7 +4,12 @@
 //! package names and Python module names: the curated [`KNOWN_MODULES`]
 //! map, the dash-to-underscore convention, and the namespace-package
 //! patterns (google-cloud-*, dbt adapters).
+//!
+//! Both sides meet at a [`MatchKey`]: a package lists the module paths it
+//! may provide, an import lists the module paths it may reach, and any
+//! shared path marks the package used.
 
+use std::borrow::{Borrow, Cow};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::imports::Import;
@@ -12,7 +17,7 @@ use crate::package::PackageName;
 use crate::pyproject::{DeclaredDependency, Group};
 
 /// The modules a package provides, for packages whose modules the naming
-/// convention in [`import_names_for`] cannot derive.
+/// convention in [`package_keys`] cannot derive.
 ///
 /// Keys are [`PackageName`]s. build.rs generates this map from
 /// `src/name_map.toml`, which documents the format.
@@ -27,6 +32,19 @@ pub enum Scope {
     MainAndDev,
 }
 
+/// A dotted module path that a package provides, such as `google.auth`.
+///
+/// Imports are dotted paths already, so the index looks up the paths an
+/// import reaches as plain `str`s, without building a key for each one.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct MatchKey(String);
+
+impl Borrow<str> for MatchKey {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Tracks which declared dependencies have been seen in an import.
 ///
 /// Every declaration of one package collapses into a single entry, so a
@@ -37,7 +55,7 @@ pub enum Scope {
 #[derive(Debug, Clone)]
 pub struct DependencyIndex {
     /// Candidate match key -> packages it satisfies.
-    keys: BTreeMap<String, BTreeSet<PackageName>>,
+    keys: BTreeMap<MatchKey, BTreeSet<PackageName>>,
     /// Packages not yet seen in any import, each with the declaration
     /// to report it by.
     remaining: BTreeMap<PackageName, DeclaredDependency>,
@@ -53,13 +71,13 @@ impl DependencyIndex {
         declared: impl IntoIterator<Item = &'a DeclaredDependency>,
         ignored: &BTreeSet<PackageName>,
     ) -> Self {
-        let mut keys: BTreeMap<String, BTreeSet<PackageName>> = BTreeMap::new();
+        let mut keys: BTreeMap<MatchKey, BTreeSet<PackageName>> = BTreeMap::new();
         let mut remaining: BTreeMap<PackageName, DeclaredDependency> = BTreeMap::new();
         for dep in declared {
             if ignored.contains(dep.name()) {
                 continue;
             }
-            for key in import_names_for(dep) {
+            for key in package_keys(dep) {
                 keys.entry(key).or_default().insert(dep.name().clone());
             }
             let kept = remaining
@@ -79,8 +97,9 @@ impl DependencyIndex {
     /// empty vec.
     pub fn mark_used(&mut self, import: &Import) -> Vec<DeclaredDependency> {
         let mut newly_used = Vec::new();
-        for candidate in candidate_keys(import) {
-            if let Some(packages) = self.keys.get(&candidate) {
+        let path = import_path(import);
+        for key in import_keys(&path) {
+            if let Some(packages) = self.keys.get(key.as_ref()) {
                 newly_used.extend(
                     packages
                         .iter()
@@ -102,62 +121,61 @@ impl DependencyIndex {
     }
 }
 
-/// The match keys under which an import marks `dep` as used: its declared
-/// spelling, the module names the naming convention derives, and the
-/// modules [`KNOWN_MODULES`] lists for it.
-fn import_names_for(dep: &DeclaredDependency) -> BTreeSet<String> {
+/// The module paths whose import marks `dep` as used: those in
+/// [`KNOWN_MODULES`], those its name derives, and its declared spelling.
+///
+/// An import marks the package used when it reaches any of these paths
+/// or anything below them, which [`import_keys`] takes care of.
+fn package_keys(dep: &DeclaredDependency) -> impl Iterator<Item = MatchKey> {
     let name = dep.name().as_str();
     let known = KNOWN_MODULES.get(name).copied().unwrap_or_default();
-    // `candidate_keys` yields the dash-joined form of a module path for
-    // every import at or below it, so `a-b` matches `import a.b`,
-    // `import a.b.c`, `from a import b`, and `from a.b import c`.
-    let mut names: BTreeSet<String> = known
+    known
         .iter()
-        .map(|module| module.replace('.', "-"))
-        .collect();
-    // Modules conventionally swap dashes for underscores (python-dateutil is
-    // an exception handled by the map). Lowercasing also lets a declared
-    // "Flask" match `import flask` without a dedicated map entry.
-    names.insert(name.replace('-', "_"));
-    // The dashed form matches namespace imports for any spelling, so a
-    // declared `Google_Auth` matches `import google.auth` as `google-auth`
-    // does.
-    names.insert(name.to_owned());
-    // The declared spelling itself matches an import with the same case,
-    // such as `PySide6`.
-    names.insert(dep.spelling().to_owned());
-    names
+        .map(|module| (*module).to_owned())
+        .chain([
+            // Modules conventionally swap dashes for underscores
+            // (python-dateutil is an exception handled by the map).
+            // Lowercasing also lets a declared "Flask" match `import flask`
+            // without a dedicated map entry.
+            name.replace('-', "_"),
+            // Dashes also separate namespace packages, so a declared
+            // `Google_Auth` matches `import google.auth` as `google-auth`
+            // does.
+            name.replace('-', "."),
+            // The declared spelling keeps its case, for modules such as
+            // `PySide6`, and its dashes separate segments as dots do.
+            dep.spelling().replace('-', "."),
+        ])
+        .map(MatchKey)
 }
 
-/// Package names an import could correspond to.
-fn candidate_keys(import: &Import) -> Vec<String> {
-    let module = import.module.as_str();
-    // `from a.b import c` may import the module a.b.c, as in
-    // `from google.cloud import bigquery`, so the joins span the item too.
-    let parts: Vec<&str> = module.split('.').chain(import.item.as_deref()).collect();
-    let mut candidates = Vec::new();
+/// The module an import may reach. `from a.b import c` may import the
+/// module a.b.c, as in `from google.cloud import bigquery`, so the path
+/// spans the item too.
+fn import_path(import: &Import) -> Cow<'_, str> {
+    match &import.item {
+        Some(item) => Cow::Owned(format!("{}.{item}", import.module)),
+        None => Cow::Borrowed(&import.module),
+    }
+}
 
-    // DBT adapters: dbt.adapters.postgres -> dbt-postgres. A bare
+/// The module paths an import of `path` reaches: `path` and each of its
+/// dotted prefixes, so `google.auth.transport.requests` reaches
+/// google.auth and the top-level google.
+fn import_keys(path: &str) -> impl Iterator<Item = Cow<'_, str>> {
+    let prefixes = path
+        .match_indices('.')
+        .map(|(end, _)| &path[..end])
+        .chain([path])
+        .map(Cow::Borrowed);
+    // dbt adapters live under dbt.adapters but are named after dbt.<name>,
+    // as in dbt.adapters.postgres from dbt-postgres. A bare
     // `import dbt.adapters` has no adapter segment.
-    if let ["dbt", "adapters", adapter, ..] = parts[..] {
-        candidates.push(format!("dbt-{adapter}"));
-    }
-
-    // Every dotted-prefix join, so a deep import like
-    // `from airflow.providers.common.sql.hooks.sql import X` matches the
-    // airflow-providers-common-sql key, and
-    // `from google.auth.transport import requests` matches google-auth.
-    for k in 2..=parts.len() {
-        candidates.push(parts[..k].join("-"));
-    }
-    // The top-level package (google.cloud -> google), and the module as
-    // written, which a declared spelling such as `ruamel.yaml` matches. An
-    // undotted module is its own top-level package.
-    candidates.push(parts[0].to_string());
-    if module != parts[0] {
-        candidates.push(module.to_string());
-    }
-    candidates
+    let adapter = path.strip_prefix("dbt.adapters.").map(|rest| {
+        let adapter = rest.split_once('.').map_or(rest, |(adapter, _)| adapter);
+        Cow::Owned(format!("dbt.{adapter}"))
+    });
+    prefixes.chain(adapter)
 }
 
 #[cfg(test)]
@@ -340,6 +358,21 @@ mod test {
     }
 
     #[test]
+    fn dotted_spelling_matches_from_import_and_imports_below() {
+        // Not in the name map, so only the declared spelling can match.
+        let mut idx = index(&["Acme.Widgets"]);
+        assert_eq!(
+            mark(&mut idx, &from("Acme", "Widgets")),
+            vec!["Acme.Widgets"]
+        );
+        let mut idx = index(&["Acme.Widgets"]);
+        assert_eq!(
+            mark(&mut idx, &plain("Acme.Widgets.core")),
+            vec!["Acme.Widgets"]
+        );
+    }
+
+    #[test]
     fn ignored_packages_are_never_reported() {
         let ignored = BTreeSet::from([PackageName::new("pyyaml")]);
         let idx = DependencyIndex::new(&declared(&["PyYAML", "requests"], Group::Main), &ignored);
@@ -429,15 +462,13 @@ mod properties {
     }
 
     // `import a.b.c` and `from a.b import c` mark the same packages, since
-    // either one may import the module a.b.c. A declared spelling with
-    // uppercase and dots, such as `A.B`, matches only `import A.B` as
-    // written, so the declared names here are lowercase.
+    // either one may import the module a.b.c.
     #[hegel::test]
     fn from_import_matches_like_dotted_import(tc: TestCase) {
         // A tiny alphabet makes declared names and import paths collide.
         let packages: Vec<String> = tc.draw(
             generators::vecs(
-                generators::from_regex("(dbt-)?[ab]{1,2}([-_.][ab]{1,2})?").fullmatch(true),
+                generators::from_regex("(dbt-)?[abAB]{1,2}([-_.][abAB]{1,2})?").fullmatch(true),
             )
             .max_size(6),
         );
@@ -575,8 +606,10 @@ mod properties {
         idx.unused(Scope::MainAndDev);
     }
 
-    // P10: the index agrees with a naive reference model under any sequence
-    // of operations.
+    // P10: the index agrees with a reference model under any sequence of
+    // operations. The model works on lists of path segments and never calls
+    // the key functions, so it catches the two sides of a match disagreeing
+    // about the key format.
     struct IndexVsModel {
         idx: DependencyIndex,
         declared: Vec<DeclaredDependency>,
@@ -584,10 +617,40 @@ mod properties {
     }
 
     impl IndexVsModel {
+        /// Mark every package that provides a module at or above a path the
+        /// import reaches. A package provides the modules the name map lists
+        /// for it, its name's dash-separated segments, its name with
+        /// underscores as one module, and its declared spelling with dashes
+        /// or dots between segments.
         fn model_mark(&mut self, import: &Import) {
-            let candidates: BTreeSet<String> = candidate_keys(import).into_iter().collect();
+            let path: Vec<&str> = import
+                .module
+                .split('.')
+                .chain(import.item.as_deref())
+                .collect();
+            let mut reached = vec![path.clone()];
+            if let ["dbt", "adapters", adapter, ..] = path[..] {
+                reached.push(vec!["dbt", adapter]);
+            }
             for dep in &self.declared {
-                if !import_names_for(dep).is_disjoint(&candidates) {
+                let name = dep.name().as_str();
+                let underscored = name.replace('-', "_");
+                let mut provided: Vec<Vec<&str>> = vec![
+                    name.split('-').collect(),
+                    vec![underscored.as_str()],
+                    dep.spelling().split(['-', '.']).collect(),
+                ];
+                provided.extend(
+                    KNOWN_MODULES
+                        .get(name)
+                        .into_iter()
+                        .flat_map(|modules| modules.iter())
+                        .map(|module| module.split('.').collect()),
+                );
+                if provided
+                    .iter()
+                    .any(|p| reached.iter().any(|r| r.starts_with(p)))
+                {
                     self.used.insert(dep.name().clone());
                 }
             }
