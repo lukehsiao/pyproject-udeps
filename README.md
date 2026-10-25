@@ -146,7 +146,7 @@ Dependencies are read from every place they can be declared, so mixed and hybrid
 ### Using `.pyprojectudepsignore`
 
 `pyproject-udeps` supports ignoring packages from a `.pyprojectudepsignore` file (the legacy `.poetryudepsignore` name is also honored).
-This file is a simple text file with 1 package name per line.
+This file is a simple text file with 1 package name per line, in any spelling: `pyyaml` also ignores a declared `PyYAML`.
 Empty lines, and lines starting with `#` are ignored.
 This is useful for packages you never want to see in the output again, whether they are false positives (imported under a name the tool does not know) or genuinely never imported but still needed at runtime (e.g., `asyncpg`, which sqlalchemy selects via connection string without your code ever importing it).
 

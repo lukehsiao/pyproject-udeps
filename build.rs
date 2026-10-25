@@ -7,10 +7,18 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+#[path = "src/package.rs"]
+mod package;
+
+use package::PackageName;
+
 const SOURCE: &str = "src/name_map.toml";
 
 fn main() {
     println!("cargo::rerun-if-changed={SOURCE}");
+    // The key check uses the normalization in this file, so a change to it
+    // must check the keys again.
+    println!("cargo::rerun-if-changed=src/package.rs");
 
     let text = fs::read_to_string(SOURCE).unwrap_or_else(|e| panic!("{SOURCE}: {e}"));
     // The `preserve_order` feature keeps file order, so the sort check below
@@ -21,7 +29,7 @@ fn main() {
     let mut previous: Option<&str> = None;
     for (package, value) in &table {
         assert!(
-            is_normalized_package(package),
+            is_valid_package(package) && PackageName::new(package).as_str() == package,
             "{SOURCE}: `{package}` is not a PEP 503 normalized package name"
         );
         if let Some(previous) = previous {
@@ -61,14 +69,19 @@ fn modules<'a>(package: &str, value: &'a toml::Value) -> Vec<&'a str> {
     modules
 }
 
-/// `[a-z0-9]+(-[a-z0-9]+)*`: the PEP 503 form of a valid project name.
-fn is_normalized_package(name: &str) -> bool {
-    name.split('-').all(|part| {
-        !part.is_empty()
-            && part
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-    })
+/// A valid project name per PEP 508: ASCII letters, digits, `-`, `_`, and
+/// `.`, starting and ending with a letter or digit.
+fn is_valid_package(name: &str) -> bool {
+    name.bytes()
+        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+        && name
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
+        && name
+            .as_bytes()
+            .last()
+            .is_some_and(u8::is_ascii_alphanumeric)
 }
 
 /// ASCII identifiers joined by dots. Python accepts non-ASCII identifiers,

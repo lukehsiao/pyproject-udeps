@@ -6,6 +6,7 @@ use std::path::Path;
 use tracing::debug;
 
 use crate::infra::fs::FileSystem;
+use crate::package::PackageName;
 
 pub const IGNORE_FILE: &str = ".pyprojectudepsignore";
 /// The pre-rename ignorefile name, still honored so existing projects keep
@@ -14,9 +15,10 @@ pub const LEGACY_IGNORE_FILE: &str = ".poetryudepsignore";
 
 /// The packages listed in the project's ignorefile.
 ///
-/// Empty lines and `#` comments are skipped. A missing or unreadable
+/// Each line names one package in any spelling. Surrounding whitespace,
+/// empty lines, and `#` comment lines are skipped. A missing or unreadable
 /// ignorefile is simply an empty set.
-pub fn ignored_packages(fs: &FileSystem) -> BTreeSet<String> {
+pub fn ignored_packages(fs: &FileSystem) -> BTreeSet<PackageName> {
     for path in [IGNORE_FILE, LEGACY_IGNORE_FILE] {
         if let Ok(contents) = fs.read_to_string_lossy(Path::new(path)) {
             let ignored = parse(&contents);
@@ -27,11 +29,12 @@ pub fn ignored_packages(fs: &FileSystem) -> BTreeSet<String> {
     BTreeSet::new()
 }
 
-fn parse(contents: &str) -> BTreeSet<String> {
+fn parse(contents: &str) -> BTreeSet<PackageName> {
     contents
         .lines()
-        .filter(|line| !(line.is_empty() || line.trim_start().starts_with('#')))
-        .map(str::to_owned)
+        .map(str::trim)
+        .filter(|line| !(line.is_empty() || line.starts_with('#')))
+        .map(PackageName::new)
         .collect()
 }
 
@@ -40,12 +43,21 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    fn names(names: &[&str]) -> BTreeSet<PackageName> {
+        names.iter().copied().map(PackageName::new).collect()
+    }
+
     #[test]
     fn parses_names_skipping_comments_and_blanks() {
-        let contents = "# tools we run via CLI only\n\npytest\n  # indented comment\nruff\n";
+        let contents = "# tools we run via CLI only\n\npytest\n  # indented comment\n  \nruff  \n";
+        assert_eq!(parse(contents), names(&["pytest", "ruff"]));
+    }
+
+    #[test]
+    fn any_spelling_names_the_package() {
         assert_eq!(
-            parse(contents),
-            BTreeSet::from(["pytest".to_string(), "ruff".to_string()])
+            parse("PyYAML\nruamel_yaml\n"),
+            names(&["pyyaml", "ruamel.yaml"])
         );
     }
 
@@ -58,19 +70,13 @@ mod test {
     #[test]
     fn reads_the_ignorefile_from_the_project_root() {
         let fs = FileSystem::create_null([(IGNORE_FILE, "pytest\n")]);
-        assert_eq!(
-            ignored_packages(&fs),
-            BTreeSet::from(["pytest".to_string()])
-        );
+        assert_eq!(ignored_packages(&fs), names(&["pytest"]));
     }
 
     #[test]
     fn falls_back_to_the_legacy_ignorefile_name() {
         let fs = FileSystem::create_null([(LEGACY_IGNORE_FILE, "pytest\n")]);
-        assert_eq!(
-            ignored_packages(&fs),
-            BTreeSet::from(["pytest".to_string()])
-        );
+        assert_eq!(ignored_packages(&fs), names(&["pytest"]));
     }
 
     #[test]
@@ -79,10 +85,7 @@ mod test {
             (IGNORE_FILE, "from-new\n"),
             (LEGACY_IGNORE_FILE, "from-legacy\n"),
         ]);
-        assert_eq!(
-            ignored_packages(&fs),
-            BTreeSet::from(["from-new".to_string()])
-        );
+        assert_eq!(ignored_packages(&fs), names(&["from-new"]));
     }
 }
 
@@ -108,7 +111,8 @@ mod properties {
             contents.push_str(name);
             contents.push('\n');
         }
-        let expected: BTreeSet<String> = names.into_iter().collect();
+        let expected: BTreeSet<PackageName> =
+            names.iter().map(|name| PackageName::new(name)).collect();
         assert_eq!(parse(&contents), expected);
     }
 }

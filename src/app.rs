@@ -12,6 +12,7 @@ use crate::infra::env::Env;
 use crate::infra::fs::{FileSystem, WalkFilters};
 use crate::infra::process::{CommandRunner, NullResponse};
 use crate::matching::DependencyIndex;
+use crate::package::PackageName;
 use crate::pyproject::Manifest;
 use crate::venv;
 
@@ -119,7 +120,7 @@ impl App {
         }
         if !options.no_ignore {
             let ignored = ignorefile::ignored_packages(&self.fs);
-            udeps.retain(|dep| !ignored.contains(dep));
+            udeps.retain(|dep| !ignored.contains(&PackageName::new(dep)));
         }
         Ok(udeps)
     }
@@ -251,6 +252,16 @@ pytest = \"^8.0\"
             ("pyproject.toml", MANIFEST),
             ("main.py", "import os\n"),
             (ignorefile::IGNORE_FILE, "requests\n"),
+        ]);
+        assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn ignorefile_matches_any_spelling() {
+        let app = null_app(&[
+            ("pyproject.toml", MANIFEST),
+            ("main.py", "import os\n"),
+            (ignorefile::IGNORE_FILE, "  Requests  \n"),
         ]);
         assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
     }

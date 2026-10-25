@@ -8,13 +8,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::imports::Import;
+use crate::package::PackageName;
 
 /// The modules a package provides, for packages whose modules the naming
 /// convention in [`import_names_for`] cannot derive.
 ///
-/// Keys are PEP 503 normalized package names, so look up the [`normalize`]d
-/// form. build.rs generates this map from `src/name_map.toml`, which
-/// documents the format.
+/// Keys are [`PackageName`]s. build.rs generates this map from
+/// `src/name_map.toml`, which documents the format.
 // phf_codegen writes its hash key as one long literal.
 #[expect(clippy::unreadable_literal)]
 static KNOWN_MODULES: phf::Map<&str, &[&str]> = include!(concat!(env!("OUT_DIR"), "/name_map.rs"));
@@ -69,34 +69,13 @@ impl DependencyIndex {
     }
 }
 
-/// PEP 503 style normalization: lowercase, with runs of `-`, `_`, and `.`
-/// collapsed to a single `-`. Declared names vary in case and separators
-/// (`PyYAML`, `pyyaml`, `ruamel.yaml`), but all spellings identify the same
-/// package on the index, so the name map is keyed by the normalized form.
-fn normalize(package: &str) -> String {
-    let mut out = String::with_capacity(package.len());
-    let mut prev_sep = false;
-    for c in package.chars() {
-        if matches!(c, '-' | '_' | '.') {
-            if !prev_sep {
-                out.push('-');
-            }
-            prev_sep = true;
-        } else {
-            out.extend(c.to_lowercase());
-            prev_sep = false;
-        }
-    }
-    out
-}
-
 /// The match keys under which an import marks `package` as used: its own
 /// spellings, the module names the naming convention derives, and the
 /// modules [`KNOWN_MODULES`] lists for it.
 fn import_names_for(package: &str) -> BTreeSet<String> {
-    let normalized = normalize(package);
+    let name = PackageName::new(package);
     let known = KNOWN_MODULES
-        .get(normalized.as_str())
+        .get(name.as_str())
         .copied()
         .unwrap_or_default();
     // `candidate_keys` yields the dash-joined form of a module path for
@@ -109,11 +88,11 @@ fn import_names_for(package: &str) -> BTreeSet<String> {
     // Modules conventionally swap dashes for underscores (python-dateutil is
     // an exception handled by the map). Lowercasing also lets a declared
     // "Flask" match `import flask` without a dedicated map entry.
-    names.insert(normalized.replace('-', "_"));
+    names.insert(name.as_str().replace('-', "_"));
     // The dashed form matches namespace imports for any spelling, so a
     // declared `Google_Auth` matches `import google.auth` as `google-auth`
     // does.
-    names.insert(normalized);
+    names.insert(name.as_str().to_owned());
     // The declared spelling itself matches an import with the same case,
     // such as `PySide6`.
     names.insert(package.to_string());
