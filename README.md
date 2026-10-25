@@ -175,37 +175,37 @@ To help with that (somewhat), you can use the option (`--virtualenv`) to include
 
 `pyproject-udeps` only checks for unused dependencies, so that is the single feature benchmarked here.
 
-The target is [PrefectHQ/prefect](https://github.com/PrefectHQ/prefect) at commit [`0e74350`](https://github.com/PrefectHQ/prefect/tree/0e7435055e18952aa8604dab78507b087a18defb) (2026-07-11): a popular, actively developed project with a standard uv-based PEP 621 layout and 57 declared runtime dependencies.
+The target is [PrefectHQ/prefect](https://github.com/PrefectHQ/prefect) at release [`3.9.0`](https://github.com/PrefectHQ/prefect/tree/1ef3e516d3b3449d19f65b30c45d1e0bff656396) (2026-10-21): a popular, actively developed project with a standard uv-based PEP 621 layout and 57 declared runtime dependencies.
 It is large enough to stress every tool, and public, so these numbers are reproducible.
 
 ```
 ❯ tokei -C -t Python
  Language              Files        Lines         Code     Comments       Blanks
- Python                 1885       680528       562678        19365        98485
+ Python                 1926       712105       589454        20079       102572
 ```
 
-Benchmarks were run with [hyperfine](https://github.com/sharkdp/hyperfine) on a desktop with an AMD Ryzen 7 7800X3D and 64 GB of RAM (Arch Linux, Python 3.14.5), with each tool in its recommended configuration against a fully `uv sync`ed checkout.
+Benchmarks were run with [hyperfine](https://github.com/sharkdp/hyperfine) on a desktop with an AMD Ryzen 7 7800X3D and 64 GB of RAM (Arch Linux, Python 3.14.8), with each tool in its recommended configuration against a fully `uv sync`ed checkout.
 
-![Bar chart of mean wall-clock time per tool when checking PrefectHQ/prefect for unused dependencies. pyproject-udeps is fastest at 0.22 seconds, followed by deptry at 0.27 s, py-unused-deps at 1.59 s, creosote at 2.11 s, pytomlcleaner at 3.73 s, pip-extra-reqs at 4.75 s, and fawltydeps at 5.41 s.](contrib/assets/benchmark.svg)
+![Bar chart of mean wall-clock time per tool when checking PrefectHQ/prefect for unused dependencies. pyproject-udeps is fastest at 35 milliseconds, followed by deptry at 0.28 s, py-unused-deps at 1.73 s, creosote at 2.27 s, pytomlcleaner at 4.06 s, fawltydeps at 6.18 s, and pip-extra-reqs at 6.96 s.](contrib/assets/benchmark.svg)
 
 #### Speed
 
 | Tool | Mean [ms] | Min [ms] | Max [ms] | Relative |
 |:---|---:|---:|---:|---:|
-| `pyproject-udeps` | 217.2 ± 2.3 | 213.4 | 221.0 | 1.00 |
-| `deptry` | 268.8 ± 4.9 | 262.6 | 277.2 | 1.24 ± 0.03 |
-| `py-unused-deps` | 1587.8 ± 9.4 | 1573.7 | 1604.3 | 7.31 ± 0.09 |
-| `creosote` | 2097.7 ± 12.4 | 2075.0 | 2119.7 | 9.66 ± 0.12 |
-| `pytomlcleaner` | 3701.9 ± 31.9 | 3655.6 | 3750.1 | 17.04 ± 0.23 |
-| `pip-extra-reqs` | 4744.7 ± 20.2 | 4716.7 | 4777.0 | 21.84 ± 0.25 |
-| `fawltydeps` | 5402.0 ± 34.2 | 5348.3 | 5456.5 | 24.87 ± 0.31 |
+| `pyproject-udeps` | 35.0 ± 3.3 | 30.5 | 43.0 | 1.00 |
+| `deptry` | 282.0 ± 4.3 | 275.3 | 288.9 | 8.07 ± 0.77 |
+| `py-unused-deps` | 1732.0 ± 77.7 | 1658.1 | 1886.3 | 49.55 ± 5.18 |
+| `creosote` | 2271.3 ± 14.3 | 2249.1 | 2295.1 | 64.98 ± 6.15 |
+| `pytomlcleaner` | 4061.1 ± 54.1 | 3970.8 | 4122.9 | 116.19 ± 11.08 |
+| `fawltydeps` | 6179.3 ± 67.4 | 6067.4 | 6288.4 | 176.78 ± 16.80 |
+| `pip-extra-reqs` | 6955.8 ± 29.9 | 6902.3 | 7007.4 | 199.00 ± 18.81 |
 
 <details>
 <summary>Reproduction commands</summary>
 
 ```console
-❯ git clone --depth 1 https://github.com/PrefectHQ/prefect  # 0e7435055e18952aa8604dab78507b087a18defb
-❯ cd prefect && uv sync
+❯ git clone --depth 1 --branch 3.9.0 https://github.com/PrefectHQ/prefect  # 1ef3e516d3b3449d19f65b30c45d1e0bff656396
+❯ cd prefect && uv sync --python 3.14
 ❯ hyperfine --warmup 2 -i \
     'pyproject-udeps' \
     'deptry . --ignore DEP001,DEP003,DEP004,DEP005' \
@@ -218,7 +218,9 @@ Benchmarks were run with [hyperfine](https://github.com/sharkdp/hyperfine) on a 
 
 The deptry `--ignore` restricts it to `DEP002` (unused dependencies), matching what the other tools check.
 deptry, pip-extra-reqs (pip-check-reqs), and py-unused-deps were installed into the project's venv because they resolve import names from installed package metadata; the rest ran from a separate tool venv.
-pip-check-reqs cannot read `pyproject.toml`, so `requirements-direct.txt` is `[project.dependencies]` written out one requirement per line.
+`requirements-direct.txt` is `[project.dependencies]` written out one requirement per line.
+pip-check-reqs 3.1.0 can also read `pyproject.toml` directly and reports the same packages.
+Prefect 3.9.0 requires uv 0.13.4 or newer.
 The chart is generated from [contrib/benchmark.vl.json](contrib/benchmark.vl.json) with [vl-convert](https://github.com/vega/vl-convert).
 
 </details>
@@ -227,50 +229,56 @@ The chart is generated from [contrib/benchmark.vl.json](contrib/benchmark.vl.jso
 
 Speed only matters if the output is trustworthy, so every reported package was audited by hand against the Prefect source.
 Throughout this audit, "false positive" means a detection error: the tool reported a package that the repository does import.
-Seven declared dependencies are verifiably never imported anywhere in the repository: `aiosqlite`, `jinja2-humanize-extension`, `rfc3339-validator`, `ruamel.yaml.clib`, and `semver` from the main dependencies, plus `opentelemetry-distro` and `opentelemetry-instrumentation-logging` from the `otel` extra.
-A perfect import-scanning tool reports those seven and nothing else.
-Whether each of the seven is safe to actually *remove* is a separate question, revisited after the audit notes.
+The audit covers the main dependencies and every extra.
+Six declared dependencies are verifiably never imported anywhere in the repository: `aiosqlite`, `jinja2-humanize-extension`, `rfc3339-validator`, and `semver` from the main dependencies, plus `opentelemetry-distro` and `opentelemetry-instrumentation-logging` from the `otel` extra.
+A perfect import-scanning tool reports those six and nothing else.
+Whether each of the six is safe to actually *remove* is a separate question, revisited after the audit notes.
 
-| Tool | Version | Reported | Verified never-imported (of 7) | False positives |
+| Tool | Version | Reported | Verified never-imported (of 6) | False positives |
 |:---|:---|---:|---:|:---|
-| `pyproject-udeps` | 0.3.5 | 7 | 7 | 0 |
+| `pyproject-udeps` | 0.4.0 | 6 | 6 | 0 |
 | `deptry` | 0.25.1 | 4 | 4 | 0 |
 | `py-unused-deps` | 0.4.2 | 5 | 4 | 1 |
-| `creosote` | 5.2.0 | 9 | 4 | 5 |
+| `creosote` | 5.2.0 | 7 | 4 | 3 |
 | `pytomlcleaner` | 1.0.0 | 0 | 0 | 0 |
-| `pip-extra-reqs` | 2.5.6 | 7 | 5 | 2 |
-| `fawltydeps` | 0.20.0 | 28 | 4 | 1, plus 23 dev-group flags |
+| `pip-extra-reqs` | 3.1.0 | 5 | 4 | 1 |
+| `fawltydeps` | 0.20.0 | 28 | 4 | 12, plus 12 dev-group flags |
 
 Notes from the audit, in the same order:
 
-- **pyproject-udeps** found all seven with no false positives.
-  It correctly credits two `opentelemetry-*` packages that are [imported lazily inside function bodies](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/_internal/metrics.py#L79-L83) deep in `src/prefect/_internal/metrics.py`, a pattern that trips up several of the other tools.
+- **pyproject-udeps** found all six with no false positives.
+  It correctly credits two `opentelemetry-*` packages that are [imported lazily inside a function body](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/src/prefect/_internal/metrics.py#L79-L84) deep in `src/prefect/_internal/metrics.py`, a pattern that trips up several of the other tools.
   Accuracy rests on two things: [`src/name_map.toml`](src/name_map.toml) is audited against the wheel contents of the 5,000 most-downloaded PyPI packages (see [contrib/name-map-audit](contrib/name-map-audit/)), and the matcher accepts any dotted prefix of an import path, so deep namespace imports find their package.
   Expect the occasional false positive on packages the map does not know yet, and please send a PR when you hit one.
-- **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 16 packages with 7 false positives.
+- **deptry** must run from inside the project's venv; installed elsewhere it cannot resolve import names and its report balloons to 17 packages with 11 false positives.
   In-venv it has no false positives, but it decides usage by mapping each dependency to the top-level modules its installed distribution claims, which makes namespace siblings indistinguishable.
-  That costs it three of the seven: `ruamel.yaml.clib`'s `top_level.txt` literally lists `ruamel`, which Prefect imports, and `opentelemetry-distro` and `opentelemetry-instrumentation-logging` install into the shared `opentelemetry/` namespace directory that `opentelemetry-api` (genuinely used) also provides.
+  That costs it two of the six: `opentelemetry-distro` and `opentelemetry-instrumentation-logging` install into the shared `opentelemetry/` namespace directory that `opentelemetry-api` (genuinely used) also provides.
   It also skips `tests/` by default.
 - **py-unused-deps** requires the project distribution to be installed.
-  Its one false positive (`griffe`) is shared with the other metadata-driven tools: griffe 2.x became a metapackage whose importable module ships in `griffelib`, so its metadata claims no modules.
-  It misses `ruamel.yaml.clib` for the same namespace-metadata reason as deptry, and never evaluates the two `opentelemetry-*` packages at all because extras are only considered when passed via its `-e` flag.
-- **creosote**'s five false positives (`apprise`, `dateparser`, `pendulum`, `pydantic_extra_types`, `whenever`) are all imports that sit inside a function body or a conditional branch, which its scanner does not see.
-- **pytomlcleaner** reported nothing at all: zero false positives, but also zero of the seven.
-  [Its matching logic](https://github.com/t3an/pytomlcleaner/blob/c8b059a03c5772808a32f09b129f1b7caa925c68/src/pytomlcleaner/cleaner.py#L161) (`is_similar` and `identify_unused`, at the commit matching the 1.0.0 wheel) explains why: every dotted path segment and imported symbol in the codebase becomes a "used" token (4,604 of them here, including single letters), and a dependency is credited as used when any token is a substring of its name or is 60% similar by difflib.
-  At that bar `semver` is credited by the token `ever` and `ruamel.yaml.clib` by `cli`, so on a codebase this large the report is structurally empty.
-- **pip-extra-reqs** false-positived on `griffe` (metapackage, as above) and `pendulum`, which is guarded by a `python_version<'3.13'` marker and therefore not installed in the Python 3.14 venv it inspects.
-- **fawltydeps** checks every declared dependency group by default, so beyond `griffe` it flags 23 dev-group entries: CLI tools that are never imported (`mkdocs-*`, `vale`, `virtualenv`, ...) and Prefect's own workspace packages, including `prefect` itself.
+  Its one false positive (`griffe`) is shared with pip-extra-reqs and fawltydeps: griffe 2.x became a metapackage whose importable module ships in `griffelib`, so its metadata claims no modules.
+  It never evaluates the two `opentelemetry-*` packages, because extras are only considered when passed via its `-e` flag.
+- **creosote**'s three false positives (`apprise`, `dateparser`, `whenever`) are all imports that sit inside a function body or a conditional branch, which [its scanner skips](https://github.com/fredrikaverpil/creosote/blob/v5.2.0/src/creosote/parsers.py#L346) unless you pass `--include-deferred`.
+  With that flag it reports exactly the four main-dependency packages, with no false positives.
+  It reads only `[project.dependencies]` by default, so it never evaluates the `otel` extra.
+- **pytomlcleaner** reported nothing at all: zero false positives, but also zero of the six.
+  [Its matching logic](https://github.com/t3an/pytomlcleaner/blob/c8b059a03c5772808a32f09b129f1b7caa925c68/src/pytomlcleaner/cleaner.py#L200-L208) (`is_similar`, at a commit whose `cleaner.py` matches the 1.0.0 wheel) explains why: every dotted path segment and imported symbol in the codebase becomes a "used" token (4,738 of them here, including single letters), and a dependency is credited as used when any token is a substring of its name or is 60% similar by difflib.
+  The token `e` alone is a substring of all six names, so on a codebase this large the report is structurally empty.
+- **pip-extra-reqs** false-positived only on `griffe` (metapackage, as above).
+  It skips `pendulum`, which is guarded by a `python_version<'3.13'` marker and therefore not installed in the Python 3.14 venv, and says it cannot tell whether it is used.
+- **fawltydeps** checks every extra and dependency group by default.
+  Beyond `griffe`, it flags 11 integration extras (`prefect-azure`, `prefect-kubernetes`, ...) that are imported only by their own package inside `src/integrations/`, and 12 dev-group entries: mostly CLI tools that are never imported (`mkdocs-*`, `vale`, `virtualenv`, ...), plus `pillow` and Prefect itself.
 
-Now, back to whether the seven are safe to remove.
+Now, back to whether the six are safe to remove.
 None of them are, and the failure modes differ.
-Two break loudly: `aiosqlite` is SQLAlchemy's async SQLite driver, selected by the [`sqlite+aiosqlite://` connection string](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/settings/models/_defaults.py#L77), and `jinja2-humanize-extension` is [loaded by a string module path](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/server/utilities/user_templates.py#L82) when Prefect builds its Jinja environment.
-Four degrade silently, which is worse: jsonschema imports `rfc3339-validator` [under `contextlib.suppress(ImportError)`](https://github.com/python-jsonschema/jsonschema/blob/v4.26.0/jsonschema/_format.py#L393-L402) to register its `date-time` format check, so without it [Prefect's parameter validation](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/src/prefect/utilities/schema_tools/validation.py#L56) quietly stops rejecting malformed timestamps; [`ruamel.yaml.clib`](https://pypi.org/project/ruamel.yaml.clib/) is the C accelerator behind ruamel.yaml, so parsing just gets slower; and `opentelemetry-distro` and `opentelemetry-instrumentation-logging` are activated through entry points by `opentelemetry-instrument`, which [Prefect's own load-testing harness launches the server under](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/load_testing/run-server.sh#L87), so telemetry auto-configuration and log instrumentation vanish without an error.
-The last one is the sneakiest: nothing in the repository mentions `semver` outside lockfiles and docs prose, and it looks like the one genuinely dead dependency.
-However, `pydantic_extra_types.semantic_version` [raises at import if `semver` is missing](https://github.com/pydantic/pydantic-extra-types/blob/v2.11.1/pydantic_extra_types/semantic_version.py#L8-L13), and Prefect [imports that type in its block tests](https://github.com/PrefectHQ/prefect/blob/0e7435055e18952aa8604dab78507b087a18defb/tests/blocks/test_core.py#L15) because block fields of that type are a supported serialization case ([#18363](https://github.com/PrefectHQ/prefect/pull/18363) added the dependency together with the test).
+Three break loudly: `aiosqlite` is SQLAlchemy's async SQLite driver, selected by the [default `sqlite+aiosqlite://` connection string](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/src/prefect/settings/models/_defaults.py#L77); `jinja2-humanize-extension` is [loaded by a string module path](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/src/prefect/server/utilities/user_templates.py#L82) when Prefect builds its Jinja environment; and `pydantic_extra_types.semantic_version` [raises at import if `semver` is missing](https://github.com/pydantic/pydantic-extra-types/blob/v2.11.1/pydantic_extra_types/semantic_version.py#L9-L14), and Prefect [imports that type in its block tests](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/tests/blocks/test_core.py#L15), so the test suite breaks ([#18363](https://github.com/PrefectHQ/prefect/pull/18363) added the dependency together with the test).
+Three degrade silently, which is worse.
+jsonschema imports `rfc3339-validator` [under `contextlib.suppress(ImportError)`](https://github.com/python-jsonschema/jsonschema/blob/v4.26.0/jsonschema/_format.py#L395-L402) to register its `date-time` format check, so without it [Prefect's parameter validation](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/src/prefect/utilities/schema_tools/validation.py#L111-L116) quietly stops rejecting malformed timestamps.
+`opentelemetry-distro` and `opentelemetry-instrumentation-logging` are activated through entry points by `opentelemetry-instrument`, which [Prefect's own load-testing harness launches the server under](https://github.com/PrefectHQ/prefect/blob/1ef3e516d3b3449d19f65b30c45d1e0bff656396/load_testing/run-server.sh#L87); with no distro installed, it [falls back to a default one](https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.65b0/opentelemetry-instrumentation/src/opentelemetry/instrumentation/auto_instrumentation/_load.py#L51-L73) without an error.
 
-All seven are load-bearing without ever being imported.
+All six are load-bearing without ever being imported.
 Reporting them is not a false positive, since the claim "never imported" is true, but they are exactly what an ignorefile (or `--virtualenv`) is for.
-Running `pyproject-udeps -e` searches the installed environment too, finds the imports living inside `sqlalchemy`, `jsonschema`, `pydantic_extra_types`, and the opentelemetry packages, and narrows the report to the three packages nothing imports anywhere: `jinja2-humanize-extension`, `opentelemetry-distro`, and `ruamel.yaml.clib`.
+Running `pyproject-udeps -e` searches the installed environment too, finds the imports living inside `sqlalchemy`, `jsonschema`, and `pydantic_extra_types`, and narrows the report to `jinja2-humanize-extension` and `opentelemetry-distro`.
+It also drops `opentelemetry-instrumentation-logging`, but only because the package imports its own modules, not because anything else uses it.
 
 ## Trophy Case
 
