@@ -1,9 +1,9 @@
 //! Virtualenv discovery.
 //!
-//! Which tool manages the environment decides where to look, and that
-//! flavor is an implementation detail of this module. Lockfiles are the
-//! strongest signal, since a lockfile proves which tool actually manages
-//! the environment; the manifest's tool tables are the tiebreak.
+//! Which tool manages the environment decides where to look. Lockfiles are
+//! the strongest signal, since a lockfile proves which tool actually
+//! manages the environment; the flavor the manifest suggests is the
+//! tiebreak.
 
 use std::path::{Path, PathBuf};
 
@@ -13,14 +13,7 @@ use tracing::debug;
 use crate::infra::env::Env;
 use crate::infra::fs::FileSystem;
 use crate::infra::process::CommandRunner;
-use crate::pyproject::Manifest;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Flavor {
-    Poetry,
-    Uv,
-    Pep621,
-}
+use crate::pyproject::{Flavor, Manifest};
 
 /// Locate the project's virtualenv directory.
 ///
@@ -49,9 +42,7 @@ fn detect_flavor(fs: &FileSystem, manifest: &Manifest) -> Flavor {
     match (uv_lock, poetry_lock) {
         (true, false) => Flavor::Uv,
         (false, true) => Flavor::Poetry,
-        _ if manifest.poetry_hint() => Flavor::Poetry,
-        _ if manifest.uv_hint() => Flavor::Uv,
-        _ => Flavor::Pep621,
+        _ => manifest.flavor(),
     }
 }
 
