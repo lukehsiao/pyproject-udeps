@@ -141,14 +141,20 @@ impl Manifest {
             info!("no dev dependencies found in pyproject.toml");
         }
 
-        let main = without_python(main)
+        // The interpreter requirement is never a dependency, however it is
+        // spelled.
+        let python = PackageName::new("python");
+        let dependencies = main
             .into_iter()
-            .map(|spelling| DeclaredDependency::new(spelling, Group::Main));
-        let dev = without_python(dev)
-            .into_iter()
-            .map(|spelling| DeclaredDependency::new(spelling, Group::Dev));
+            .map(|spelling| DeclaredDependency::new(spelling, Group::Main))
+            .chain(
+                dev.into_iter()
+                    .map(|spelling| DeclaredDependency::new(spelling, Group::Dev)),
+            )
+            .filter(|dep| *dep.name() != python)
+            .collect();
         Ok(Manifest {
-            dependencies: main.chain(dev).collect(),
+            dependencies,
             flavor: if lookup_table(&value, &["tool", "poetry"]).is_some() {
                 Flavor::Poetry
             } else if lookup_table(&value, &["tool", "uv"]).is_some() {
@@ -205,11 +211,6 @@ fn requirement_names(array: &[Value]) -> BTreeSet<String> {
         .filter_map(requirement_name)
         .map(str::to_owned)
         .collect()
-}
-
-fn without_python(mut names: BTreeSet<String>) -> BTreeSet<String> {
-    names.remove("python");
-    names
 }
 
 /// Extract the package name from a PEP 508 requirement string.
@@ -449,9 +450,12 @@ mypy = "^1.10"
     }
 
     #[test]
-    fn python_is_never_a_dependency() {
+    fn python_is_never_a_dependency_in_any_spelling() {
         let manifest = Manifest::parse(
             r#"
+[project]
+dependencies = ["Python>=3.11"]
+
 [tool.poetry.dependencies]
 python = "^3.11"
 "#,
@@ -522,6 +526,10 @@ mod properties {
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
 
+    fn is_python(name: &str) -> bool {
+        name.eq_ignore_ascii_case("python")
+    }
+
     // Whichever table layout declares them, parsing returns exactly the
     // declared names in the right group.
     #[hegel::test]
@@ -563,10 +571,10 @@ mod properties {
         let mut expected_main: BTreeSet<String> = poetry_main.into_iter().collect();
         expected_main.extend(project_main);
         expected_main.extend(extras);
-        expected_main.remove("python");
+        expected_main.retain(|name| !is_python(name));
         let mut expected_dev: BTreeSet<String> = poetry_group.into_iter().collect();
         expected_dev.extend(pep735);
-        expected_dev.remove("python");
+        expected_dev.retain(|name| !is_python(name));
 
         let main: BTreeSet<String> = names(&manifest, Group::Main)
             .into_iter()
@@ -605,7 +613,7 @@ mod properties {
             }
             source.push_str("]\n");
         }
-        expected.remove("python");
+        expected.retain(|name| !is_python(name));
 
         let manifest = Manifest::parse(&source).unwrap();
         let dev: BTreeSet<String> = names(&manifest, Group::Dev)
