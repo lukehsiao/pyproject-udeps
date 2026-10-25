@@ -1,7 +1,8 @@
 //! Declared-dependency extraction from pyproject.toml.
 //!
 //! This module hides the zoo of places dependencies can be declared. Callers
-//! see one flat list of declarations, each a main or a dev dependency.
+//! see one flat list of declarations, each a main or a dev dependency, and
+//! the virtualenv flavor the manifest's tool tables suggest.
 
 use std::collections::BTreeSet;
 
@@ -52,12 +53,20 @@ impl DeclaredDependency {
     }
 }
 
-/// The declared dependencies of a project.
+/// The tool that manages a project's environment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Flavor {
+    Poetry,
+    Uv,
+    Pep621,
+}
+
+/// The declared dependencies of a project, and the virtualenv flavor its
+/// tool tables suggest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     dependencies: Vec<DeclaredDependency>,
-    has_tool_poetry: bool,
-    has_tool_uv: bool,
+    flavor: Flavor,
 }
 
 impl Manifest {
@@ -140,8 +149,13 @@ impl Manifest {
             .map(|spelling| DeclaredDependency::new(spelling, Group::Dev));
         Ok(Manifest {
             dependencies: main.chain(dev).collect(),
-            has_tool_poetry: lookup_table(&value, &["tool", "poetry"]).is_some(),
-            has_tool_uv: lookup_table(&value, &["tool", "uv"]).is_some(),
+            flavor: if lookup_table(&value, &["tool", "poetry"]).is_some() {
+                Flavor::Poetry
+            } else if lookup_table(&value, &["tool", "uv"]).is_some() {
+                Flavor::Uv
+            } else {
+                Flavor::Pep621
+            },
         })
     }
 
@@ -152,14 +166,10 @@ impl Manifest {
         &self.dependencies
     }
 
-    /// The manifest has a `[tool.poetry]` table; consumed by venv discovery.
-    pub(crate) fn poetry_hint(&self) -> bool {
-        self.has_tool_poetry
-    }
-
-    /// The manifest has a `[tool.uv]` table; consumed by venv discovery.
-    pub(crate) fn uv_hint(&self) -> bool {
-        self.has_tool_uv
+    /// The flavor the tool tables suggest. `[tool.poetry]` wins over
+    /// `[tool.uv]`, and a manifest with neither is plain PEP 621.
+    pub fn flavor(&self) -> Flavor {
+        self.flavor
     }
 }
 
@@ -423,6 +433,19 @@ mypy = "^1.10"
         )
         .unwrap();
         assert_eq!(names(&manifest, Group::Dev), vec!["mypy", "pytest"]);
+    }
+
+    #[test]
+    fn tool_tables_suggest_the_flavor_with_poetry_first() {
+        let deps = "[project]\ndependencies = []\n";
+        for (tables, flavor) in [
+            ("[tool.poetry]\n[tool.uv]\n", Flavor::Poetry),
+            ("[tool.uv]\n", Flavor::Uv),
+            ("", Flavor::Pep621),
+        ] {
+            let manifest = Manifest::parse(&format!("{deps}{tables}")).unwrap();
+            assert_eq!(manifest.flavor(), flavor, "{tables}");
+        }
     }
 
     #[test]
