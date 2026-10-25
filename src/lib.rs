@@ -25,8 +25,8 @@ pub struct Cli {
     /// Assumes you have already installed all dependencies. The virtualenv
     /// is discovered from the project's lockfile and tool tables: poetry
     /// projects via `poetry env info -p`, uv projects via
-    /// `$UV_PROJECT_ENVIRONMENT` or `.venv`, and other PEP 621 projects via
-    /// `$VIRTUAL_ENV` or `.venv`.
+    /// `$UV_PROJECT_ENVIRONMENT`, and other PEP 621 projects via
+    /// `$VIRTUAL_ENV`, each falling back to `.venv`.
     pub virtualenv: bool,
     #[arg(short, long)]
     /// Look for unused dependencies in dev-dependencies.

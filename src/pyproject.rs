@@ -11,6 +11,7 @@ use toml::Value;
 use tracing::info;
 
 use crate::package::PackageName;
+use crate::venv::Flavor;
 
 /// Whether a declaration makes a package a main or a dev dependency.
 ///
@@ -51,14 +52,6 @@ impl DeclaredDependency {
     pub fn group(&self) -> Group {
         self.group
     }
-}
-
-/// The tool that manages a project's environment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Flavor {
-    Poetry,
-    Uv,
-    Pep621,
 }
 
 /// The declared dependencies of a project, and the virtualenv flavor its
