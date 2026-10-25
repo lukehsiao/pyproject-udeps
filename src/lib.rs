@@ -15,6 +15,7 @@ mod scan;
 mod testgen;
 mod venv;
 use crate::app::{App, Options};
+use crate::matching::Scope;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -47,7 +48,11 @@ pub struct Cli {
 impl From<&Cli> for Options {
     fn from(cli: &Cli) -> Options {
         Options {
-            dev: cli.dev,
+            scope: if cli.dev {
+                Scope::MainAndDev
+            } else {
+                Scope::Main
+            },
             virtualenv: cli.virtualenv,
             no_ignore: cli.no_ignore,
         }
@@ -93,6 +98,9 @@ mod test {
 [tool.poetry.dependencies]
 zope = \"*\"
 requests = \"*\"
+
+[tool.poetry.group.dev.dependencies]
+pytest = \"*\"
 ";
 
     #[derive(Debug, PartialEq, Eq)]
@@ -155,6 +163,30 @@ requests = \"*\"
                 "",
                 "pyproject.toml not found. Are you in the root directory of your project?\n"
             )
+        );
+    }
+
+    #[test]
+    fn dev_flag_also_reports_dev_dependencies() {
+        let files = [("pyproject.toml", MANIFEST), ("main.py", "import zope\n")];
+        assert_eq!(run_args(&[], project(&files)), outcome(1, "requests\n", ""));
+        assert_eq!(
+            run_args(&["--dev"], project(&files)),
+            outcome(1, "pytest\nrequests\n", "")
+        );
+    }
+
+    #[test]
+    fn no_ignore_flag_skips_the_ignorefile() {
+        let files = [
+            ("pyproject.toml", MANIFEST),
+            ("main.py", "import zope\n"),
+            (".pyprojectudepsignore", "requests\n"),
+        ];
+        assert_eq!(run_args(&[], project(&files)), outcome(0, "", ""));
+        assert_eq!(
+            run_args(&["--no-ignore"], project(&files)),
+            outcome(1, "requests\n", "")
         );
     }
 

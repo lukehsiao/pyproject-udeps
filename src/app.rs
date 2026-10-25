@@ -22,8 +22,8 @@ use crate::venv;
 /// What to analyze, independent of the CLI layer.
 #[derive(Debug, Clone, Default)]
 pub struct Options {
-    /// Also report unused dev dependencies.
-    pub dev: bool,
+    /// Which unused dependencies to report.
+    pub scope: Scope,
     /// Also search the project virtualenv for usage.
     pub virtualenv: bool,
     /// Skip the ignorefile.
@@ -120,12 +120,7 @@ impl App {
             }
         }
 
-        let scope = if options.dev {
-            Scope::MainAndDev
-        } else {
-            Scope::Main
-        };
-        Ok(index.unused(scope))
+        Ok(index.unused(options.scope))
     }
 }
 
@@ -151,45 +146,6 @@ pytest = \"^8.0\"
                 .collect(),
             ..NullConfig::default()
         })
-    }
-
-    #[test]
-    fn reports_declared_minus_imported() {
-        let app = null_app(&[("pyproject.toml", MANIFEST), ("main.py", "import os\n")]);
-        assert_eq!(app.run(&Options::default()).unwrap(), vec!["requests"]);
-    }
-
-    #[test]
-    fn imported_dependencies_are_not_reported() {
-        let app = null_app(&[
-            ("pyproject.toml", MANIFEST),
-            ("main.py", "import requests\n"),
-        ]);
-        assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
-    }
-
-    #[test]
-    fn dev_dependencies_reported_only_with_dev_option() {
-        let files = [
-            ("pyproject.toml", MANIFEST),
-            ("main.py", "import requests\n"),
-        ];
-        let app = null_app(&files);
-        assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
-
-        let app = null_app(&files);
-        let options = Options {
-            dev: true,
-            ..Options::default()
-        };
-        assert_eq!(app.run(&options).unwrap(), vec!["pytest"]);
-    }
-
-    #[test]
-    fn missing_pyproject_error_includes_the_hint() {
-        let app = null_app(&[]);
-        let err = app.run(&Options::default()).unwrap_err().to_string();
-        assert!(err.contains("Are you in the root directory"), "{err}");
     }
 
     #[test]
@@ -234,16 +190,6 @@ pytest = \"^8.0\"
     }
 
     #[test]
-    fn ignorefile_filters_the_report() {
-        let app = null_app(&[
-            ("pyproject.toml", MANIFEST),
-            ("main.py", "import os\n"),
-            (ignorefile::IGNORE_FILE, "requests\n"),
-        ]);
-        assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
-    }
-
-    #[test]
     fn ignorefile_matches_any_spelling() {
         let app = null_app(&[
             ("pyproject.toml", MANIFEST),
@@ -251,20 +197,6 @@ pytest = \"^8.0\"
             (ignorefile::IGNORE_FILE, "  Requests  \n"),
         ]);
         assert_eq!(app.run(&Options::default()).unwrap(), Vec::<String>::new());
-    }
-
-    #[test]
-    fn no_ignore_option_bypasses_the_ignorefile() {
-        let app = null_app(&[
-            ("pyproject.toml", MANIFEST),
-            ("main.py", "import os\n"),
-            (ignorefile::IGNORE_FILE, "requests\n"),
-        ]);
-        let options = Options {
-            no_ignore: true,
-            ..Options::default()
-        };
-        assert_eq!(app.run(&options).unwrap(), vec!["requests"]);
     }
 }
 

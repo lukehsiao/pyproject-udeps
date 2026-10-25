@@ -26,8 +26,9 @@ use crate::pyproject::{DeclaredDependency, Group};
 static KNOWN_MODULES: phf::Map<&str, &[&str]> = include!(concat!(env!("OUT_DIR"), "/name_map.rs"));
 
 /// Which unused dependencies to report.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Scope {
+    #[default]
     Main,
     MainAndDev,
 }
@@ -83,6 +84,8 @@ impl DependencyIndex {
             let kept = remaining
                 .entry(dep.name().clone())
                 .or_insert_with(|| dep.clone());
+            // `Group` orders `Main` before `Dev`, so a main declaration
+            // always wins, then the first-sorting spelling.
             if (dep.group(), dep.spelling()) < (kept.group(), kept.spelling()) {
                 *kept = dep.clone();
             }
