@@ -97,8 +97,7 @@ impl DependencyIndex {
     /// empty vec.
     pub fn mark_used(&mut self, import: &Import) -> Vec<DeclaredDependency> {
         let mut newly_used = Vec::new();
-        let path = import_path(import);
-        for key in import_keys(&path) {
+        for key in import_keys(import.as_str()) {
             if let Some(packages) = self.keys.get(key.as_ref()) {
                 newly_used.extend(
                     packages
@@ -149,16 +148,6 @@ fn package_keys(dep: &DeclaredDependency) -> impl Iterator<Item = MatchKey> {
         .map(MatchKey)
 }
 
-/// The module an import may reach. `from a.b import c` may import the
-/// module a.b.c, as in `from google.cloud import bigquery`, so the path
-/// spans the item too.
-fn import_path(import: &Import) -> Cow<'_, str> {
-    match &import.item {
-        Some(item) => Cow::Owned(format!("{}.{item}", import.module)),
-        None => Cow::Borrowed(&import.module),
-    }
-}
-
 /// The module paths an import of `path` reaches: `path` and each of its
 /// dotted prefixes, so `google.auth.transport.requests` reaches
 /// google.auth and the top-level google.
@@ -205,54 +194,44 @@ mod test {
             .collect()
     }
 
-    fn plain(module: &str) -> Import {
-        Import {
-            module: module.to_string(),
-            item: None,
-        }
-    }
-
-    fn from(module: &str, item: &str) -> Import {
-        Import {
-            module: module.to_string(),
-            item: Some(item.to_string()),
-        }
+    fn import(path: &str) -> Import {
+        Import::new(path)
     }
 
     #[test]
     fn exact_name_matches() {
         let mut idx = index(&["requests", "numpy"]);
-        assert_eq!(mark(&mut idx, &plain("requests")), vec!["requests"]);
+        assert_eq!(mark(&mut idx, &import("requests")), vec!["requests"]);
         assert_eq!(unused(&idx), vec!["numpy"]);
     }
 
     #[test]
     fn known_module_matches() {
         let mut idx = index(&["scikit-learn"]);
-        idx.mark_used(&plain("sklearn"));
+        idx.mark_used(&import("sklearn"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dash_to_underscore_alias_matches() {
         let mut idx = index(&["typing-extensions"]);
-        idx.mark_used(&plain("typing_extensions"));
+        idx.mark_used(&import("typing_extensions"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
-    fn google_style_from_import_matches() {
+    fn namespace_package_module_matches() {
         let mut idx = index(&["google-cloud-bigquery"]);
-        idx.mark_used(&from("google.cloud", "bigquery"));
+        idx.mark_used(&import("google.cloud.bigquery"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn declared_case_and_separators_are_normalized() {
         let mut idx = index(&["Flask", "PyYAML", "ruamel.yaml.clib"]);
-        idx.mark_used(&plain("flask"));
-        idx.mark_used(&plain("yaml"));
-        idx.mark_used(&plain("ruamel_yaml_clib"));
+        idx.mark_used(&import("flask"));
+        idx.mark_used(&import("yaml"));
+        idx.mark_used(&import("ruamel_yaml_clib"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
@@ -262,49 +241,45 @@ mod test {
         // apache-airflow-providers-common-sql, and an import below that
         // module must still match.
         let mut idx = index(&["apache-airflow-providers-common-sql"]);
-        idx.mark_used(&from("airflow.providers.common.sql.hooks.sql", "X"));
+        idx.mark_used(&import("airflow.providers.common.sql.hooks.sql.X"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn dbt_adapter_import_matches() {
         let mut idx = index(&["dbt-postgres"]);
-        idx.mark_used(&plain("dbt.adapters.postgres"));
-        assert_eq!(unused(&idx), Vec::<String>::new());
-    }
-
-    #[test]
-    fn dbt_adapter_from_import_matches() {
-        let mut idx = index(&["dbt-postgres"]);
-        idx.mark_used(&from("dbt.adapters", "postgres"));
+        idx.mark_used(&import("dbt.adapters.postgres"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn bare_dbt_adapters_import_matches_nothing() {
         let mut idx = index(&["dbt-postgres"]);
-        assert_eq!(mark(&mut idx, &plain("dbt.adapters")), Vec::<String>::new());
+        assert_eq!(
+            mark(&mut idx, &import("dbt.adapters")),
+            Vec::<String>::new()
+        );
         assert_eq!(unused(&idx), vec!["dbt-postgres"]);
     }
 
     #[test]
     fn dotted_join_matches_sqlalchemy_extensions() {
         let mut idx = index(&["sqlalchemy-ext"]);
-        idx.mark_used(&plain("sqlalchemy.ext"));
+        idx.mark_used(&import("sqlalchemy.ext"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn first_two_segments_match() {
         let mut idx = index(&["google-auth"]);
-        idx.mark_used(&from("google.auth.transport", "requests"));
+        idx.mark_used(&import("google.auth.transport.requests"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
     #[test]
     fn top_level_segment_matches() {
         let mut idx = index(&["google"]);
-        idx.mark_used(&plain("google.cloud"));
+        idx.mark_used(&import("google.cloud"));
         assert_eq!(unused(&idx), Vec::<String>::new());
     }
 
@@ -316,14 +291,14 @@ mod test {
         // package of its own.
         let mut idx = index(&["pyyaml", "yaml"]);
         assert_eq!(unused(&idx), vec!["pyyaml", "yaml"]);
-        assert_eq!(mark(&mut idx, &plain("yaml")), vec!["pyyaml", "yaml"]);
+        assert_eq!(mark(&mut idx, &import("yaml")), vec!["pyyaml", "yaml"]);
     }
 
     #[test]
     fn marking_is_idempotent() {
         let mut idx = index(&["requests"]);
-        assert_eq!(mark(&mut idx, &plain("requests")), vec!["requests"]);
-        assert_eq!(mark(&mut idx, &plain("requests")), Vec::<String>::new());
+        assert_eq!(mark(&mut idx, &import("requests")), vec!["requests"]);
+        assert_eq!(mark(&mut idx, &import("requests")), Vec::<String>::new());
     }
 
     #[test]
@@ -354,20 +329,20 @@ mod test {
         let mut deps = declared(&["foo-bar"], Group::Main);
         deps.extend(declared(&["Foo_Bar"], Group::Dev));
         let mut idx = DependencyIndex::new(&deps, &BTreeSet::new());
-        assert_eq!(mark(&mut idx, &plain("Foo_Bar")), vec!["foo-bar"]);
+        assert_eq!(mark(&mut idx, &import("Foo_Bar")), vec!["foo-bar"]);
     }
 
     #[test]
-    fn dotted_spelling_matches_from_import_and_imports_below() {
+    fn dotted_spelling_matches_its_module_and_modules_below() {
         // Not in the name map, so only the declared spelling can match.
         let mut idx = index(&["Acme.Widgets"]);
         assert_eq!(
-            mark(&mut idx, &from("Acme", "Widgets")),
+            mark(&mut idx, &import("Acme.Widgets")),
             vec!["Acme.Widgets"]
         );
         let mut idx = index(&["Acme.Widgets"]);
         assert_eq!(
-            mark(&mut idx, &plain("Acme.Widgets.core")),
+            mark(&mut idx, &import("Acme.Widgets.core")),
             vec!["Acme.Widgets"]
         );
     }
@@ -383,7 +358,7 @@ mod test {
 #[cfg(test)]
 mod properties {
     use super::*;
-    use crate::testgen::{identifier, module_path};
+    use crate::testgen::module_path;
     use hegel::TestCase;
     use hegel::generators;
     use pretty_assertions::assert_eq;
@@ -407,38 +382,22 @@ mod properties {
 
     #[hegel::composite]
     fn arbitrary_import(tc: &hegel::TestCase) -> Import {
-        let module = tc.draw(hegel::one_of!(
-            generators::from_regex("dbt\\.adapters(\\.[a-z]{1,6}){0,2}").fullmatch(true),
+        let path = tc.draw(hegel::one_of!(
+            generators::from_regex("dbt\\.adapters(\\.[a-z]{1,6}){0,3}").fullmatch(true),
             module_path(),
             generators::text().max_size(20),
         ));
-        let item = if tc.draw(generators::booleans()) {
-            Some(tc.draw(identifier()))
-        } else {
-            None
-        };
-        Import { module, item }
+        Import::new(&path)
     }
 
-    /// An import at or below `module`: `import module`, `import module.x`,
-    /// `from module import x`, `from module.x import y`, or, for a dotted
-    /// module, `from parent import last`.
+    /// An import of `module` or of a module below it.
     #[hegel::composite]
     fn import_at_or_below(tc: &hegel::TestCase, module: String) -> Import {
-        let (module, item) = match tc.draw(generators::integers::<u8>().max_value(4)) {
-            0 => (module, None),
-            1 => (format!("{module}.{}", tc.draw(module_path())), None),
-            2 => (module, Some(tc.draw(identifier()))),
-            3 => (
-                format!("{module}.{}", tc.draw(module_path())),
-                Some(tc.draw(identifier())),
-            ),
-            _ => match module.rsplit_once('.') {
-                Some((parent, last)) => (parent.to_string(), Some(last.to_string())),
-                None => (module, None),
-            },
-        };
-        Import { module, item }
+        if tc.draw(generators::booleans()) {
+            Import::new(&module)
+        } else {
+            Import::new(&format!("{module}.{}", tc.draw(module_path())))
+        }
     }
 
     /// A declared spelling that PEP 503 normalizes to `segments.join("-")`:
@@ -459,44 +418,6 @@ mod properties {
             }
         }
         spelling
-    }
-
-    // `import a.b.c` and `from a.b import c` mark the same packages, since
-    // either one may import the module a.b.c.
-    #[hegel::test]
-    fn from_import_matches_like_dotted_import(tc: TestCase) {
-        // A tiny alphabet makes declared names and import paths collide.
-        let packages: Vec<String> = tc.draw(
-            generators::vecs(
-                generators::from_regex("(dbt-)?[abAB]{1,2}([-_.][abAB]{1,2})?").fullmatch(true),
-            )
-            .max_size(6),
-        );
-        let prefix = tc.draw(generators::sampled_from(vec![
-            vec![],
-            vec!["dbt", "adapters"],
-        ]));
-        let rest: Vec<String> = tc.draw(
-            generators::vecs(generators::from_regex("[ab]{1,2}").fullmatch(true))
-                .min_size(1)
-                .max_size(4),
-        );
-        let mut segments: Vec<String> = prefix.into_iter().map(str::to_string).collect();
-        segments.extend(rest);
-        tc.assume(segments.len() >= 2);
-        let (last, parent) = segments.split_last().expect("at least two segments");
-
-        let mut by_dotted = index_of(&packages);
-        by_dotted.mark_used(&Import {
-            module: segments.join("."),
-            item: None,
-        });
-        let mut by_from = index_of(&packages);
-        by_from.mark_used(&Import {
-            module: parent.join("."),
-            item: Some(last.clone()),
-        });
-        assert_eq!(all_unused(&by_dotted), all_unused(&by_from));
     }
 
     // A package is used when code imports the module its name spells, with
@@ -549,7 +470,7 @@ mod properties {
             .max_size(8),
         );
         for module in imports {
-            let marked = idx.mark_used(&Import { module, item: None });
+            let marked = idx.mark_used(&Import::new(&module));
             assert_eq!(marked, Vec::new());
         }
         let mut expected: Vec<String> = packages;
@@ -596,13 +517,7 @@ mod properties {
     fn marking_never_panics(tc: TestCase) {
         let packages: Vec<String> = tc.draw(generators::vecs(generators::text()).max_size(5));
         let mut idx = index_of(&packages);
-        let module = tc.draw(generators::text());
-        let item = if tc.draw(generators::booleans()) {
-            Some(tc.draw(generators::text()))
-        } else {
-            None
-        };
-        idx.mark_used(&Import { module, item });
+        idx.mark_used(&Import::new(&tc.draw(generators::text())));
         idx.unused(Scope::MainAndDev);
     }
 
@@ -623,11 +538,7 @@ mod properties {
         /// underscores as one module, and its declared spelling with dashes
         /// or dots between segments.
         fn model_mark(&mut self, import: &Import) {
-            let path: Vec<&str> = import
-                .module
-                .split('.')
-                .chain(import.item.as_deref())
-                .collect();
+            let path: Vec<&str> = import.as_str().split('.').collect();
             let mut reached = vec![path.clone()];
             if let ["dbt", "adapters", adapter, ..] = path[..] {
                 reached.push(vec!["dbt", adapter]);
@@ -673,10 +584,7 @@ mod properties {
         fn mark_declared(&mut self, tc: TestCase) {
             tc.assume(!self.declared.is_empty());
             let package = tc.draw(generators::sampled_from(self.declared.clone()));
-            let import = Import {
-                module: package.spelling().to_owned(),
-                item: None,
-            };
+            let import = Import::new(package.spelling());
             self.idx.mark_used(&import);
             self.model_mark(&import);
         }

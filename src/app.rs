@@ -110,8 +110,7 @@ impl App {
             for file in files {
                 for import in extract_imports(&file.contents) {
                     debug!(
-                        module = import.module,
-                        item = ?import.item,
+                        import = import.as_str(),
                         path = %file.path.display(),
                         "Checking import",
                     );
