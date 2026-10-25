@@ -33,7 +33,7 @@ A package's name exactly as written in the manifest.
 _Avoid_: raw name, original name
 
 **Import**:
-A module path that the project's source code imports.
+The dotted module path that an import statement or a dynamic import call may reach, so `from a import b` is the import `a.b`.
 _Avoid_: module, import statement
 
 **Name map**:

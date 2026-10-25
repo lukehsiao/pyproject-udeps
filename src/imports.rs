@@ -11,14 +11,27 @@ use ruff_python_ast::{self as ast, Expr, PySourceType, Stmt};
 use ruff_python_parser::parse_unchecked_source;
 use tracing::debug;
 
-/// One imported module, as written in the source.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Import {
-    /// Dotted absolute module path, e.g. `google.cloud`.
-    pub module: String,
-    /// For `from X import Y`, the name Y (one `Import` per name).
-    /// `None` for plain `import X` and for `from X import *`.
-    pub item: Option<String>,
+/// The dotted module path that an import statement, or an
+/// `importlib.import_module` or `__import__` call, may reach.
+///
+/// `from a import b` may import the module `a.b`, as in
+/// `from google.cloud import bigquery`, so it is the import `a.b`.
+/// `from a import *` is the import `a`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Import(String);
+
+impl Import {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+impl Import {
+    pub fn new(path: &str) -> Self {
+        Import(path.to_owned())
+    }
 }
 
 /// Extract all absolute imports from Python source.
@@ -54,10 +67,7 @@ impl Visitor<'_> for ImportCollector {
         match stmt {
             Stmt::Import(ast::StmtImport { names, .. }) => {
                 for alias in names {
-                    self.imports.push(Import {
-                        module: alias.name.to_string(),
-                        item: None,
-                    });
+                    self.imports.push(Import(alias.name.to_string()));
                 }
             }
             Stmt::ImportFrom(ast::StmtImportFrom {
@@ -68,10 +78,11 @@ impl Visitor<'_> for ImportCollector {
             }) => {
                 for alias in names {
                     let name = alias.name.as_str();
-                    self.imports.push(Import {
-                        module: module.to_string(),
-                        item: (name != "*").then(|| name.to_string()),
-                    });
+                    self.imports.push(Import(if name == "*" {
+                        module.to_string()
+                    } else {
+                        format!("{module}.{name}")
+                    }));
                 }
             }
             _ => {}
@@ -85,7 +96,7 @@ impl Visitor<'_> for ImportCollector {
         if let Expr::Call(call) = expr
             && let Some(module) = dynamic_import_argument(call)
         {
-            self.imports.push(Import { module, item: None });
+            self.imports.push(Import(module));
         }
         walk_expr(self, expr);
     }
@@ -121,18 +132,8 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn import(module: &str) -> Import {
-        Import {
-            module: module.to_string(),
-            item: None,
-        }
-    }
-
-    fn from_import(module: &str, item: &str) -> Import {
-        Import {
-            module: module.to_string(),
-            item: Some(item.to_string()),
-        }
+    fn import(path: &str) -> Import {
+        Import::new(path)
     }
 
     #[test]
@@ -160,7 +161,7 @@ mod test {
     fn from_import_single() {
         assert_eq!(
             extract_imports("from google.cloud import bigquery\n"),
-            vec![from_import("google.cloud", "bigquery")]
+            vec![import("google.cloud.bigquery")]
         );
     }
 
@@ -169,8 +170,8 @@ mod test {
         assert_eq!(
             extract_imports("from collections import OrderedDict, defaultdict\n"),
             vec![
-                from_import("collections", "OrderedDict"),
-                from_import("collections", "defaultdict"),
+                import("collections.OrderedDict"),
+                import("collections.defaultdict"),
             ]
         );
     }
@@ -180,10 +181,7 @@ mod test {
         let source = "from os.path import (\n    join,\n    split,\n)\n";
         assert_eq!(
             extract_imports(source),
-            vec![
-                from_import("os.path", "join"),
-                from_import("os.path", "split")
-            ]
+            vec![import("os.path.join"), import("os.path.split")]
         );
     }
 
@@ -291,16 +289,10 @@ mod properties {
     impl Spec {
         fn expected(&self) -> Vec<Import> {
             match self {
-                Spec::Plain { path, .. } => vec![Import {
-                    module: path.clone(),
-                    item: None,
-                }],
+                Spec::Plain { path, .. } => vec![Import::new(path)],
                 Spec::From { path, names } => names
                     .iter()
-                    .map(|(name, _)| Import {
-                        module: path.clone(),
-                        item: Some(name.clone()),
-                    })
+                    .map(|(name, _)| Import::new(&format!("{path}.{name}")))
                     .collect(),
             }
         }
@@ -401,9 +393,7 @@ mod properties {
     }
 
     fn sorted(mut imports: Vec<Import>) -> Vec<Import> {
-        imports.sort_by(|a, b| {
-            (a.module.as_str(), a.item.as_deref()).cmp(&(b.module.as_str(), b.item.as_deref()))
-        });
+        imports.sort();
         imports
     }
 
